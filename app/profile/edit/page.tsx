@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Navbar } from "@/components/layout/navbar";
@@ -8,7 +8,6 @@ import { Footer } from "@/components/layout/footer";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { currentUser } from "@/lib/data";
 import {
   ArrowLeft,
   Save,
@@ -19,6 +18,7 @@ import {
   Lock,
   Eye,
   EyeOff,
+  Loader2,
 } from "lucide-react";
 
 const serifFont = { fontFamily: "'DM Serif Display', Georgia, serif" };
@@ -26,18 +26,37 @@ const serifFont = { fontFamily: "'DM Serif Display', Georgia, serif" };
 export default function EditProfilePage() {
   const router = useRouter();
   const [isSaving, setIsSaving] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const [showPassword, setShowPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
 
   const [formData, setFormData] = useState({
-    name: currentUser.name,
-    email: "budi@example.com",
-    bio: "Passionate traveler exploring the hidden gems of East Java. Love mountains, waterfalls, and local cuisine.",
-    avatar: currentUser.avatar,
+    name: "",
+    email: "",
+    bio: "",
+    avatar: "",
     currentPassword: "",
     newPassword: "",
     confirmPassword: "",
   });
+
+  useEffect(() => {
+    fetch("/api/auth/me")
+      .then((res) => {
+        if (!res.ok) throw new Error("Not authenticated");
+        return res.json();
+      })
+      .then((data) => {
+        setFormData((prev) => ({
+          ...prev,
+          name: data.user.name || "",
+          email: data.user.email || "",
+          avatar: data.user.avatar || "",
+        }));
+        setIsLoading(false);
+      })
+      .catch(() => router.push("/login"));
+  }, [router]);
 
   const [errors, setErrors] = useState<Record<string, string>>({});
 

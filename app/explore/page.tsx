@@ -1,70 +1,104 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { Navbar } from "@/components/layout/navbar";
 import { Footer } from "@/components/layout/footer";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { places, cities } from "@/lib/data";
 import {
   Search,
   Star,
   MapPin,
-  ArrowRight,
   SlidersHorizontal,
   Utensils,
   Mountain,
   Sparkles,
   TrendingUp,
   Filter,
+  Loader2,
 } from "lucide-react";
 
 const serifFont = { fontFamily: "'DM Serif Display', Georgia, serif" };
+
+interface Place {
+  id: number;
+  name: string;
+  slug: string;
+  description: string;
+  category: string;
+  cityName: string;
+  image: string;
+  rating: number;
+  reviewCount: number;
+  priceRange: string;
+  isMustVisit: boolean;
+  tags: string[];
+}
+
+interface City {
+  id: number;
+  name: string;
+  slug: string;
+}
 
 export default function ExplorePage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCity, setSelectedCity] = useState<string>("all");
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [sortBy, setSortBy] = useState<"rating" | "popular" | "newest">("rating");
+  const [places, setPlaces] = useState<Place[]>([]);
+  const [cities, setCities] = useState<City[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [total, setTotal] = useState(0);
 
-  const filteredPlaces = useMemo(() => {
-    let result = [...places];
+  // Fetch cities once
+  useEffect(() => {
+    fetch("/api/cities")
+      .then((res) => res.json())
+      .then((data) => setCities(data.cities || []))
+      .catch(console.error);
+  }, []);
 
-    // Filter by search query
-    if (searchQuery) {
-      result = result.filter(
-        (place) =>
-          place.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          place.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          place.cityName.toLowerCase().includes(searchQuery.toLowerCase())
-      );
+  // Fetch places on filter change
+  const fetchPlaces = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const params = new URLSearchParams();
+      if (selectedCity !== "all") params.set("city", selectedCity);
+      if (selectedCategory !== "all") params.set("category", selectedCategory);
+      if (searchQuery) params.set("search", searchQuery);
+      params.set("limit", "40");
+
+      const res = await fetch(`/api/places?${params}`);
+      const data = await res.json();
+      
+      let result = data.places || [];
+      
+      // Client-side sorting
+      if (sortBy === "rating") {
+        result.sort((a: Place, b: Place) => b.rating - a.rating);
+      } else if (sortBy === "popular") {
+        result.sort((a: Place, b: Place) => b.reviewCount - a.reviewCount);
+      }
+      
+      setPlaces(result);
+      setTotal(data.total || 0);
+    } catch (error) {
+      console.error("Failed to fetch places:", error);
     }
+    setIsLoading(false);
+  }, [selectedCity, selectedCategory, searchQuery, sortBy]);
 
-    // Filter by city
-    if (selectedCity !== "all") {
-      result = result.filter((place) => place.cityId === selectedCity);
-    }
-
-    // Filter by category
-    if (selectedCategory !== "all") {
-      result = result.filter((place) => place.category === selectedCategory);
-    }
-
-    // Sort
-    if (sortBy === "rating") {
-      result.sort((a, b) => b.rating - a.rating);
-    } else if (sortBy === "popular") {
-      result.sort((a, b) => b.reviewCount - a.reviewCount);
-    }
-
-    return result;
-  }, [searchQuery, selectedCity, selectedCategory, sortBy]);
+  useEffect(() => {
+    const debounce = setTimeout(fetchPlaces, 300);
+    return () => clearTimeout(debounce);
+  }, [fetchPlaces]);
 
   const cityFilters = [
     { id: "all", name: "All Cities" },
-    ...cities.map((city) => ({ id: city.id, name: city.name })),
+    ...cities.map((city) => ({ id: city.slug, name: city.name })),
   ];
 
   return (
@@ -180,13 +214,19 @@ export default function ExplorePage() {
         <div className="container mx-auto px-4">
           <div className="flex items-center justify-between mb-6">
             <p className="text-muted-foreground">
-              Showing <span className="text-foreground font-medium">{filteredPlaces.length}</span> destinations
+              Showing <span className="text-foreground font-medium">{places.length}</span> of{" "}
+              <span className="text-foreground font-medium">{total}</span> destinations
             </p>
           </div>
 
-          {filteredPlaces.length > 0 ? (
+          {isLoading ? (
+            <div className="flex items-center justify-center py-20">
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+              <span className="ml-3 text-muted-foreground">Loading destinations...</span>
+            </div>
+          ) : places.length > 0 ? (
             <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-              {filteredPlaces.map((place) => (
+              {places.map((place) => (
                 <Link
                   key={place.id}
                   href={`/destination/${place.slug}`}

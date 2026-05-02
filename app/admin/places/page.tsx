@@ -1,8 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
-import { places, cities } from "@/lib/data";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -20,32 +19,82 @@ import {
   Trash2,
   Eye,
   Star,
-  Filter,
   Utensils,
   Mountain,
+  Loader2,
 } from "lucide-react";
 
 const serifFont = { fontFamily: "'DM Serif Display', Georgia, serif" };
+
+interface Place {
+  id: number;
+  name: string;
+  slug: string;
+  description: string;
+  category: string;
+  cityName: string;
+  image: string;
+  rating: number;
+  reviewCount: number;
+  isMustVisit: boolean;
+}
+
+interface City {
+  id: number;
+  name: string;
+  slug: string;
+}
 
 export default function AdminPlacesPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [filterCity, setFilterCity] = useState("all");
   const [filterCategory, setFilterCategory] = useState("all");
+  const [places, setPlaces] = useState<Place[]>([]);
+  const [cities, setCities] = useState<City[]>([]);
+  const [total, setTotal] = useState(0);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const filteredPlaces = places.filter((place) => {
-    const matchesSearch =
-      place.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      place.cityName.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesCity = filterCity === "all" || place.cityId === filterCity;
-    const matchesCategory =
-      filterCategory === "all" || place.category === filterCategory;
-    return matchesSearch && matchesCity && matchesCategory;
-  });
+  useEffect(() => {
+    fetch("/api/cities")
+      .then((res) => res.json())
+      .then((data) => setCities(data.cities || []))
+      .catch(console.error);
+  }, []);
 
-  const handleDelete = (id: string, name: string) => {
-    if (confirm(`Are you sure you want to delete "${name}"?`)) {
-      // In real app, this would call backend API
-      alert(`Deleted: ${name} (This is a demo)`);
+  const fetchPlaces = useCallback(async () => {
+    setIsLoading(true);
+    const params = new URLSearchParams({ limit: "100" });
+    if (filterCity !== "all") params.set("city", filterCity);
+    if (filterCategory !== "all") params.set("category", filterCategory);
+    if (searchQuery) params.set("search", searchQuery);
+
+    try {
+      const res = await fetch(`/api/places?${params}`);
+      const data = await res.json();
+      setPlaces(data.places || []);
+      setTotal(data.total || 0);
+    } catch (err) {
+      console.error(err);
+    }
+    setIsLoading(false);
+  }, [filterCity, filterCategory, searchQuery]);
+
+  useEffect(() => {
+    const timer = setTimeout(fetchPlaces, 300);
+    return () => clearTimeout(timer);
+  }, [fetchPlaces]);
+
+  const handleDelete = async (id: number, name: string) => {
+    if (!confirm(`Are you sure you want to delete "${name}"?`)) return;
+    try {
+      const res = await fetch(`/api/places/${id}`, { method: "DELETE" });
+      if (res.ok) {
+        setPlaces((prev) => prev.filter((p) => p.id !== id));
+      } else {
+        alert("Failed to delete place");
+      }
+    } catch {
+      alert("Error deleting place");
     }
   };
 
@@ -70,7 +119,6 @@ export default function AdminPlacesPage() {
       {/* Filters */}
       <div className="bg-card rounded-xl border border-border p-4 mb-6">
         <div className="flex flex-col md:flex-row gap-4">
-          {/* Search */}
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
@@ -80,8 +128,6 @@ export default function AdminPlacesPage() {
               onChange={(e) => setSearchQuery(e.target.value)}
             />
           </div>
-
-          {/* City Filter */}
           <select
             className="h-10 px-3 rounded-md border border-input bg-background text-sm"
             value={filterCity}
@@ -89,13 +135,11 @@ export default function AdminPlacesPage() {
           >
             <option value="all">All Cities</option>
             {cities.map((city) => (
-              <option key={city.id} value={city.id}>
+              <option key={city.id} value={city.slug}>
                 {city.name}
               </option>
             ))}
           </select>
-
-          {/* Category Filter */}
           <select
             className="h-10 px-3 rounded-md border border-input bg-background text-sm"
             value={filterCategory}
@@ -111,113 +155,119 @@ export default function AdminPlacesPage() {
       {/* Results Count */}
       <div className="flex items-center justify-between mb-4">
         <p className="text-sm text-muted-foreground">
-          Showing {filteredPlaces.length} of {places.length} places
+          Showing {places.length} of {total} places
         </p>
       </div>
 
-      {/* Places Table */}
-      <div className="bg-card rounded-xl border border-border overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead>
-              <tr className="border-b border-border bg-secondary/50">
-                <th className="text-left p-4 font-medium text-sm">Place</th>
-                <th className="text-left p-4 font-medium text-sm">Category</th>
-                <th className="text-left p-4 font-medium text-sm">City</th>
-                <th className="text-left p-4 font-medium text-sm">Rating</th>
-                <th className="text-left p-4 font-medium text-sm">Status</th>
-                <th className="text-right p-4 font-medium text-sm">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border">
-              {filteredPlaces.map((place) => (
-                <tr key={place.id} className="hover:bg-secondary/30">
-                  <td className="p-4">
-                    <div className="flex items-center gap-3">
-                      <img
-                        src={place.image}
-                        alt={place.name}
-                        className="w-12 h-12 rounded-lg object-cover"
-                      />
-                      <div>
-                        <p className="font-medium">{place.name}</p>
-                        <p className="text-sm text-muted-foreground line-clamp-1 max-w-xs">
-                          {place.description}
-                        </p>
-                      </div>
-                    </div>
-                  </td>
-                  <td className="p-4">
-                    <Badge variant="outline" className="gap-1">
-                      {place.category === "kuliner" ? (
-                        <Utensils className="h-3 w-3" />
-                      ) : (
-                        <Mountain className="h-3 w-3" />
-                      )}
-                      {place.category === "kuliner" ? "Culinary" : "Tourism"}
-                    </Badge>
-                  </td>
-                  <td className="p-4">
-                    <span className="text-sm">{place.cityName}</span>
-                  </td>
-                  <td className="p-4">
-                    <div className="flex items-center gap-1">
-                      <Star className="h-4 w-4 text-yellow-400 fill-yellow-400" />
-                      <span className="text-sm">{place.rating}</span>
-                      <span className="text-xs text-muted-foreground">
-                        ({place.reviewCount})
-                      </span>
-                    </div>
-                  </td>
-                  <td className="p-4">
-                    {place.isMustVisit ? (
-                      <Badge className="bg-primary/20 text-primary">Must Visit</Badge>
-                    ) : (
-                      <Badge variant="secondary">Regular</Badge>
-                    )}
-                  </td>
-                  <td className="p-4 text-right">
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon">
-                          <MoreVertical className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem asChild>
-                          <Link href={`/admin/places/${place.id}/view`}>
-                            <Eye className="h-4 w-4 mr-2" />
-                            View
-                          </Link>
-                        </DropdownMenuItem>
-                        <DropdownMenuItem asChild>
-                          <Link href={`/admin/places/${place.id}/edit`}>
-                            <Edit className="h-4 w-4 mr-2" />
-                            Edit
-                          </Link>
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          className="text-destructive"
-                          onClick={() => handleDelete(place.id, place.name)}
-                        >
-                          <Trash2 className="h-4 w-4 mr-2" />
-                          Delete
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+      {isLoading ? (
+        <div className="flex items-center justify-center py-12">
+          <Loader2 className="h-6 w-6 animate-spin text-primary" />
+          <span className="ml-2 text-muted-foreground">Loading...</span>
         </div>
-
-        {filteredPlaces.length === 0 && (
-          <div className="text-center py-12">
-            <p className="text-muted-foreground">No places found matching your criteria.</p>
+      ) : (
+        <div className="bg-card rounded-xl border border-border overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="border-b border-border bg-secondary/50">
+                  <th className="text-left p-4 font-medium text-sm">Place</th>
+                  <th className="text-left p-4 font-medium text-sm">Category</th>
+                  <th className="text-left p-4 font-medium text-sm">City</th>
+                  <th className="text-left p-4 font-medium text-sm">Rating</th>
+                  <th className="text-left p-4 font-medium text-sm">Status</th>
+                  <th className="text-right p-4 font-medium text-sm">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border">
+                {places.map((place) => (
+                  <tr key={place.id} className="hover:bg-secondary/30">
+                    <td className="p-4">
+                      <div className="flex items-center gap-3">
+                        <img
+                          src={place.image}
+                          alt={place.name}
+                          className="w-12 h-12 rounded-lg object-cover"
+                        />
+                        <div>
+                          <p className="font-medium">{place.name}</p>
+                          <p className="text-sm text-muted-foreground line-clamp-1 max-w-xs">
+                            {place.description}
+                          </p>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="p-4">
+                      <Badge variant="outline" className="gap-1">
+                        {place.category === "kuliner" ? (
+                          <Utensils className="h-3 w-3" />
+                        ) : (
+                          <Mountain className="h-3 w-3" />
+                        )}
+                        {place.category === "kuliner" ? "Culinary" : "Tourism"}
+                      </Badge>
+                    </td>
+                    <td className="p-4">
+                      <span className="text-sm">{place.cityName}</span>
+                    </td>
+                    <td className="p-4">
+                      <div className="flex items-center gap-1">
+                        <Star className="h-4 w-4 text-yellow-400 fill-yellow-400" />
+                        <span className="text-sm">{place.rating}</span>
+                        <span className="text-xs text-muted-foreground">
+                          ({place.reviewCount})
+                        </span>
+                      </div>
+                    </td>
+                    <td className="p-4">
+                      {place.isMustVisit ? (
+                        <Badge className="bg-primary/20 text-primary">Must Visit</Badge>
+                      ) : (
+                        <Badge variant="secondary">Regular</Badge>
+                      )}
+                    </td>
+                    <td className="p-4 text-right">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon">
+                            <MoreVertical className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem asChild>
+                            <Link href={`/admin/places/${place.id}/view`}>
+                              <Eye className="h-4 w-4 mr-2" />
+                              View
+                            </Link>
+                          </DropdownMenuItem>
+                          <DropdownMenuItem asChild>
+                            <Link href={`/admin/places/${place.id}/edit`}>
+                              <Edit className="h-4 w-4 mr-2" />
+                              Edit
+                            </Link>
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            className="text-destructive"
+                            onClick={() => handleDelete(place.id, place.name)}
+                          >
+                            <Trash2 className="h-4 w-4 mr-2" />
+                            Delete
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
-        )}
-      </div>
+
+          {places.length === 0 && (
+            <div className="text-center py-12">
+              <p className="text-muted-foreground">No places found matching your criteria.</p>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }

@@ -1,13 +1,12 @@
 "use client";
 
-import { useState, use } from "react";
+import { useState, useEffect, use } from "react";
 import Link from "next/link";
 import { Navbar } from "@/components/layout/navbar";
 import { Footer } from "@/components/layout/footer";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
-import { places, reviews as reviewsData } from "@/lib/data";
 import {
   Star,
   MapPin,
@@ -22,11 +21,45 @@ import {
   CheckCircle,
   Camera,
   Send,
-  User,
   ExternalLink,
+  Loader2,
 } from "lucide-react";
 
 const serifFont = { fontFamily: "'DM Serif Display', Georgia, serif" };
+
+interface PlaceDetail {
+  id: number;
+  name: string;
+  slug: string;
+  description: string;
+  longDescription: string;
+  category: string;
+  cityName: string;
+  image: string;
+  gallery: string[];
+  rating: number;
+  reviewCount: number;
+  address: string;
+  coordinates: { lat: number; lng: number } | null;
+  operationalHours: string;
+  priceRange: string;
+  estimatedDuration: string;
+  difficulty: string;
+  isMustVisit: boolean;
+  tags: string[];
+  reviews: Review[];
+}
+
+interface Review {
+  id: number;
+  rating: number;
+  comment: string;
+  createdAt: string;
+  userId: number;
+  userName: string;
+  userAvatar: string;
+  userLevel: number;
+}
 
 export default function DestinationDetailPage({
   params,
@@ -34,15 +67,60 @@ export default function DestinationDetailPage({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = use(params);
-  const place = places.find((p) => p.slug === slug);
+  const [place, setPlace] = useState<PlaceDetail | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [notFound, setNotFound] = useState(false);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [isFavorite, setIsFavorite] = useState(false);
   const [isVisited, setIsVisited] = useState(false);
   const [newReview, setNewReview] = useState("");
   const [newRating, setNewRating] = useState(0);
   const [hoverRating, setHoverRating] = useState(0);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [relatedPlaces, setRelatedPlaces] = useState<PlaceDetail[]>([]);
 
-  if (!place) {
+  useEffect(() => {
+    async function fetchPlace() {
+      try {
+        const res = await fetch(`/api/places/${slug}`);
+        if (!res.ok) {
+          setNotFound(true);
+          setIsLoading(false);
+          return;
+        }
+        const data = await res.json();
+        setPlace(data.place);
+
+        // Fetch related places from same city
+        if (data.place?.cityName) {
+          const relRes = await fetch(`/api/places?city=${data.place.cityName.toLowerCase()}&limit=3`);
+          const relData = await relRes.json();
+          setRelatedPlaces(
+            (relData.places || []).filter((p: PlaceDetail) => p.id !== data.place.id).slice(0, 3)
+          );
+        }
+      } catch {
+        setNotFound(true);
+      }
+      setIsLoading(false);
+    }
+    fetchPlace();
+  }, [slug]);
+
+  if (isLoading) {
+    return (
+      <main className="min-h-screen bg-background">
+        <Navbar isLoggedIn={true} />
+        <div className="flex items-center justify-center pt-32 pb-20">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          <span className="ml-3 text-muted-foreground">Loading destination...</span>
+        </div>
+        <Footer />
+      </main>
+    );
+  }
+
+  if (notFound || !place) {
     return (
       <main className="min-h-screen bg-background">
         <Navbar isLoggedIn={true} />
@@ -57,8 +135,7 @@ export default function DestinationDetailPage({
     );
   }
 
-  const images = place.gallery || [place.image];
-  const placeReviews = reviewsData.filter((r) => r.placeId === place.id);
+  const images = place.gallery?.length > 0 ? place.gallery : [place.image];
 
   const nextImage = () => {
     setCurrentImageIndex((prev) => (prev + 1) % images.length);
@@ -68,18 +145,53 @@ export default function DestinationDetailPage({
     setCurrentImageIndex((prev) => (prev - 1 + images.length) % images.length);
   };
 
-  const handleSubmitReview = (e: React.FormEvent) => {
-    e.preventDefault();
-    // In real app, this would submit to backend
-    alert("Review submitted! (This is a demo)");
-    setNewReview("");
-    setNewRating(0);
+  const handleCheckin = async () => {
+    try {
+      const res = await fetch("/api/gamification/checkin", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ placeId: place.id }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setIsVisited(true);
+        alert(data.message || "Check-in successful! +50 XP");
+      } else {
+        alert(data.error || "Check-in failed");
+      }
+    } catch {
+      alert("Please login to check in");
+    }
   };
 
-  // Related places
-  const relatedPlaces = places
-    .filter((p) => p.cityId === place.cityId && p.id !== place.id)
-    .slice(0, 3);
+  const handleSubmitReview = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newRating) {
+      alert("Please select a rating");
+      return;
+    }
+    setIsSubmitting(true);
+    try {
+      const res = await fetch(`/api/places/${place.id}/reviews`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ rating: newRating, comment: newReview }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        alert("Review submitted! +100 XP");
+        setNewReview("");
+        setNewRating(0);
+        // Refresh the page to show new review
+        window.location.reload();
+      } else {
+        alert(data.error || "Failed to submit review");
+      }
+    } catch {
+      alert("Please login to write a review");
+    }
+    setIsSubmitting(false);
+  };
 
   return (
     <main className="min-h-screen bg-background">
@@ -169,11 +281,12 @@ export default function DestinationDetailPage({
                   </Button>
                   <Button
                     variant={isVisited ? "default" : "outline"}
-                    onClick={() => setIsVisited(!isVisited)}
+                    onClick={handleCheckin}
                     className="gap-2"
+                    disabled={isVisited}
                   >
                     <CheckCircle className={`h-4 w-4 ${isVisited ? "fill-current" : ""}`} />
-                    {isVisited ? "Visited" : "Mark Visited"}
+                    {isVisited ? "Visited ✓" : "Check In (+50 XP)"}
                   </Button>
                 </div>
               </div>
@@ -196,7 +309,7 @@ export default function DestinationDetailPage({
                   <span className="font-semibold">{place.rating}</span>
                 </div>
                 <span className="text-muted-foreground">
-                  {place.reviewCount.toLocaleString()} reviews
+                  {place.reviewCount?.toLocaleString()} reviews
                 </span>
               </div>
 
@@ -247,7 +360,7 @@ export default function DestinationDetailPage({
               <p className="text-muted-foreground leading-relaxed">
                 {place.longDescription || place.description}
               </p>
-              {place.tags && (
+              {place.tags && place.tags.length > 0 && (
                 <div className="flex flex-wrap gap-2 mt-4">
                   {place.tags.map((tag) => (
                     <Badge key={tag} variant="secondary">
@@ -262,62 +375,53 @@ export default function DestinationDetailPage({
             <div className="bg-card rounded-2xl p-6 border border-border">
               <div className="flex items-center justify-between mb-6">
                 <h2 className="text-xl font-semibold">Explorer Reviews</h2>
-                <Link href="#" className="text-primary text-sm hover:underline">
-                  View All
-                </Link>
               </div>
 
               {/* Review List */}
               <div className="space-y-6">
-                {placeReviews.map((review) => (
-                  <div key={review.id} className="border-b border-border pb-6 last:border-0">
-                    <div className="flex items-start gap-3">
-                      <img
-                        src={review.userAvatar}
-                        alt={review.userName}
-                        className="w-10 h-10 rounded-full object-cover"
-                      />
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-1">
-                          <span className="font-medium">{review.userName}</span>
-                          <Badge variant="outline" className="text-xs">
-                            Lv. {review.userLevel}
-                          </Badge>
-                        </div>
-                        <div className="flex items-center gap-2 mb-2">
-                          <div className="flex">
-                            {[1, 2, 3, 4, 5].map((star) => (
-                              <Star
-                                key={star}
-                                className={`h-3 w-3 ${
-                                  star <= review.rating
-                                    ? "text-yellow-400 fill-yellow-400"
-                                    : "text-muted"
-                                }`}
-                              />
-                            ))}
+                {place.reviews && place.reviews.length > 0 ? (
+                  place.reviews.map((review) => (
+                    <div key={review.id} className="border-b border-border pb-6 last:border-0">
+                      <div className="flex items-start gap-3">
+                        <img
+                          src={review.userAvatar || "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100"}
+                          alt={review.userName}
+                          className="w-10 h-10 rounded-full object-cover"
+                        />
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className="font-medium">{review.userName}</span>
+                            <Badge variant="outline" className="text-xs">
+                              Lv. {review.userLevel}
+                            </Badge>
                           </div>
-                          <span className="text-xs text-muted-foreground">
-                            {review.createdAt}
-                          </span>
-                        </div>
-                        <p className="text-sm text-muted-foreground">{review.comment}</p>
-                        {review.photos && review.photos.length > 0 && (
-                          <div className="flex gap-2 mt-3">
-                            {review.photos.map((photo, index) => (
-                              <img
-                                key={index}
-                                src={photo}
-                                alt="Review photo"
-                                className="w-16 h-16 rounded-lg object-cover"
-                              />
-                            ))}
+                          <div className="flex items-center gap-2 mb-2">
+                            <div className="flex">
+                              {[1, 2, 3, 4, 5].map((star) => (
+                                <Star
+                                  key={star}
+                                  className={`h-3 w-3 ${
+                                    star <= review.rating
+                                      ? "text-yellow-400 fill-yellow-400"
+                                      : "text-muted"
+                                  }`}
+                                />
+                              ))}
+                            </div>
+                            <span className="text-xs text-muted-foreground">
+                              {new Date(review.createdAt).toLocaleDateString("id-ID")}
+                            </span>
                           </div>
-                        )}
+                          <p className="text-sm text-muted-foreground">{review.comment}</p>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                ))}
+                  ))
+                ) : (
+                  <p className="text-muted-foreground text-center py-4">
+                    No reviews yet. Be the first to review!
+                  </p>
+                )}
               </div>
 
               {/* Write Review */}
@@ -360,8 +464,12 @@ export default function DestinationDetailPage({
                       <Camera className="h-4 w-4 mr-2" />
                       Add Photos
                     </Button>
-                    <Button type="submit" size="sm">
-                      <Send className="h-4 w-4 mr-2" />
+                    <Button type="submit" size="sm" disabled={isSubmitting}>
+                      {isSubmitting ? (
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      ) : (
+                        <Send className="h-4 w-4 mr-2" />
+                      )}
                       Submit Review
                     </Button>
                   </div>
@@ -377,7 +485,7 @@ export default function DestinationDetailPage({
               <h3 className="font-semibold mb-4">Location</h3>
               {/* Map Placeholder */}
               <div className="aspect-square bg-secondary rounded-xl overflow-hidden mb-4 relative">
-                <div className="w-full h-full bg-[url('https://api.mapbox.com/styles/v1/mapbox/dark-v11/static/112.75,-7.25,8,0/400x400?access_token=pk.placeholder')] bg-cover bg-center flex items-center justify-center">
+                <div className="w-full h-full flex items-center justify-center bg-secondary">
                   <div className="bg-background/80 backdrop-blur-sm rounded-lg p-4 text-center">
                     <MapPin className="h-8 w-8 text-primary mx-auto mb-2" />
                     <p className="text-sm font-medium">View on Map</p>
@@ -388,7 +496,7 @@ export default function DestinationDetailPage({
               <Button className="w-full" asChild>
                 <a
                   href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
-                    place.address
+                    place.address || place.name
                   )}`}
                   target="_blank"
                   rel="noopener noreferrer"

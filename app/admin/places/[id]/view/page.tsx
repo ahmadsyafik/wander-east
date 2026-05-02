@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import { places, cities } from "@/lib/data";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -23,19 +22,27 @@ const serifFont = { fontFamily: "'DM Serif Display', Georgia, serif" };
 export default function ViewPlacePage() {
   const params = useParams();
   const router = useRouter();
-  const [place, setPlace] = useState<(typeof places)[0] | null>(null);
+  const [place, setPlace] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const foundPlace = places.find((p) => p.id === params.id);
-    setPlace(foundPlace || null);
-    setIsLoading(false);
+    fetch(`/api/admin/places/${params.id}`)
+      .then((r) => r.json())
+      .then((d) => {
+        setPlace(d.place || null);
+        setIsLoading(false);
+      })
+      .catch(() => setIsLoading(false));
   }, [params.id]);
 
-  const handleDelete = () => {
-    if (confirm(`Are you sure you want to delete "${place?.name}"?`)) {
-      alert("Place deleted! (This is a demo - backend integration needed)");
+  const handleDelete = async () => {
+    if (!confirm(`Are you sure you want to delete "${place?.name}"?`)) return;
+    const res = await fetch(`/api/places/${place.id}`, { method: "DELETE" });
+    if (res.ok) {
+      alert("Place deleted!");
       router.push("/admin/places");
+    } else {
+      alert("Failed to delete");
     }
   };
 
@@ -58,7 +65,6 @@ export default function ViewPlacePage() {
     );
   }
 
-  const city = cities.find((c) => c.id === place.cityId);
 
   return (
     <div className="p-6 lg:p-8">
@@ -121,12 +127,12 @@ export default function ViewPlacePage() {
             <div className="grid sm:grid-cols-2 gap-4">
               <div>
                 <label className="text-sm text-muted-foreground">City</label>
-                <p className="font-medium">{city?.name || place.cityName}</p>
+                <p className="font-medium">{place.cityName}</p>
               </div>
               <div>
-                <label className="text-sm text-muted-foreground">Coordinates</label>
+                <label className="text-sm text-muted-foreground">Address</label>
                 <p className="font-medium">
-                  {place.coordinates.lat}, {place.coordinates.lng}
+                  {place.address || "N/A"}
                 </p>
               </div>
             </div>

@@ -1,12 +1,11 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import dynamic from "next/dynamic";
 import { Navbar } from "@/components/layout/navbar";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { places, cities } from "@/lib/data";
 import { Star, Utensils, Mountain, X, Loader2 } from "lucide-react";
 
 const serifFont = { fontFamily: "'DM Serif Display', Georgia, serif" };
@@ -64,9 +63,13 @@ export default function MapPage() {
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [selectedPlace, setSelectedPlace] = useState<string | null>(null);
   const [isClient, setIsClient] = useState(false);
+  const [places, setPlaces] = useState<Array<{id: string; name: string; slug: string; description: string; category: string; cityId: string; cityName: string; image: string; rating: number; reviewCount: number; coordinates?: {lat: number; lng: number} | null}>>([]);
+  const [cities, setCities] = useState<Array<{id: string; name: string; slug: string}>>([]);
 
   useEffect(() => {
     setIsClient(true);
+    fetch("/api/cities").then(r => r.json()).then(d => setCities(d.cities || []));
+    fetch("/api/places?limit=100").then(r => r.json()).then(d => setPlaces(d.places || []));
   }, []);
 
   const filteredPlaces = places.filter((place) => {

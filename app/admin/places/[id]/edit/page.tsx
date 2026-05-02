@@ -3,7 +3,6 @@
 import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import { places, cities } from "@/lib/data";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -26,6 +25,7 @@ export default function EditPlacePage() {
   const router = useRouter();
   const [isSaving, setIsSaving] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [cities, setCities] = useState<Array<{id: number; name: string; slug: string}>>([]);
 
   const [formData, setFormData] = useState({
     name: "",
@@ -41,32 +41,48 @@ export default function EditPlacePage() {
   });
 
   useEffect(() => {
-    // Find the place by ID
-    const place = places.find((p) => p.id === params.id);
-    if (place) {
-      setFormData({
-        name: place.name,
-        slug: place.slug,
-        description: place.description,
-        category: place.category,
-        cityId: place.cityId,
-        image: place.image,
-        rating: place.rating,
-        reviewCount: place.reviewCount,
-        isMustVisit: place.isMustVisit,
-        coordinates: place.coordinates,
-      });
-    }
-    setIsLoading(false);
+    fetch("/api/cities").then(r => r.json()).then(d => setCities(d.cities || []));
+    fetch(`/api/admin/places/${params.id}`)
+      .then((r) => r.json())
+      .then((d) => {
+        if (d.place) {
+          setFormData({
+            name: d.place.name || "",
+            slug: d.place.slug || "",
+            description: d.place.description || "",
+            category: d.place.category || "wisata",
+            cityId: d.place.cityId || "",
+            image: d.place.image || "",
+            rating: d.place.rating || 0,
+            reviewCount: d.place.reviewCount || 0,
+            isMustVisit: d.place.isMustVisit || false,
+            coordinates: d.place.coordinates || { lat: 0, lng: 0 },
+          });
+        }
+        setIsLoading(false);
+      })
+      .catch(() => setIsLoading(false));
   }, [params.id]);
 
   const handleSave = async () => {
     setIsSaving(true);
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 1000));
+    try {
+      const res = await fetch(`/api/admin/places/${params.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(formData),
+      });
+      if (res.ok) {
+        alert("Place updated successfully!");
+        router.push("/admin/places");
+      } else {
+        const data = await res.json();
+        alert(data.error || "Failed to update");
+      }
+    } catch {
+      alert("Error updating place");
+    }
     setIsSaving(false);
-    alert("Place updated successfully! (This is a demo - backend integration needed)");
-    router.push("/admin/places");
   };
 
   const handleChange = (

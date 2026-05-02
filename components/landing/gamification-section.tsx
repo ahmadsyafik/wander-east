@@ -2,10 +2,14 @@
 
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { badges } from "@/lib/data";
 import { Trophy, Star, Users, ArrowRight } from "lucide-react";
 
 const serifFont = { fontFamily: "'DM Serif Display', Georgia, serif" };
+
+const featuredBadges = [
+  { id: 1, name: "Trailblazer", icon: "🏔️", description: "Visit 10 destinations" },
+  { id: 2, name: "Food Hunter", icon: "🍜", description: "Review 5 culinary spots" },
+];
 
 export function GamificationSection() {
   return (
@@ -44,7 +48,7 @@ export function GamificationSection() {
               </div>
 
               <Button asChild className="rounded-full">
-                <Link href="/login">
+                <Link href="/register">
                   Join the Ranks
                   <ArrowRight className="ml-2 h-4 w-4" />
                 </Link>
@@ -55,7 +59,7 @@ export function GamificationSection() {
             <div className="space-y-6">
               {/* Featured Badges */}
               <div className="flex justify-center gap-6">
-                {badges.slice(0, 2).map((badge) => (
+                {featuredBadges.map((badge) => (
                   <div
                     key={badge.id}
                     className="flex flex-col items-center gap-2 p-4 bg-background/50 rounded-2xl border border-border"

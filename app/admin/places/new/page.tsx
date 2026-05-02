@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -8,7 +8,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
-import { cities } from "@/lib/data";
 import { ArrowLeft, Upload, X, Save, ImageIcon } from "lucide-react";
 
 const serifFont = { fontFamily: "'DM Serif Display', Georgia, serif" };
@@ -16,6 +15,12 @@ const serifFont = { fontFamily: "'DM Serif Display', Georgia, serif" };
 export default function AddPlacePage() {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
+  const [cities, setCities] = useState<Array<{id: number; name: string; slug: string}>>([]);
+
+  useEffect(() => {
+    fetch("/api/cities").then(r => r.json()).then(d => setCities(d.cities || []));
+  }, []);
+
   const [formData, setFormData] = useState({
     name: "",
     description: "",
@@ -36,12 +41,27 @@ export default function AddPlacePage() {
     e.preventDefault();
     setIsLoading(true);
 
-    // In real app, this would call backend API
-    setTimeout(() => {
-      setIsLoading(false);
-      alert("Place added successfully! (This is a demo)");
-      router.push("/admin/places");
-    }, 1500);
+    try {
+      const res = await fetch("/api/admin/places", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ...formData,
+          tags: formData.tags.split(",").map((t) => t.trim()).filter(Boolean),
+          images,
+        }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        alert("Place added successfully!");
+        router.push("/admin/places");
+      } else {
+        alert(data.error || "Failed to add place");
+      }
+    } catch {
+      alert("Error adding place");
+    }
+    setIsLoading(false);
   };
 
   const handleImageUpload = () => {

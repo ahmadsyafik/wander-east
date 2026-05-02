@@ -1,8 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { adminUser } from "@/lib/data";
+import { usePathname, useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 import {
   LayoutDashboard,
@@ -55,6 +54,7 @@ export default function AdminLayout({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
+  const router = useRouter();
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const isActive = (href: string) => {
@@ -119,13 +119,11 @@ export default function AdminLayout({
         {/* Admin Info */}
         <div className="p-4 border-b border-border">
           <div className="flex items-center gap-3">
-            <img
-              src={adminUser.avatar}
-              alt={adminUser.name}
-              className="w-10 h-10 rounded-full object-cover"
-            />
+            <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center">
+              <Users className="h-5 w-5 text-primary" />
+            </div>
             <div className="flex-1 min-w-0">
-              <p className="font-medium text-sm truncate">{adminUser.name}</p>
+              <p className="font-medium text-sm truncate">Admin</p>
               <p className="text-xs text-muted-foreground">Administrator</p>
             </div>
           </div>
@@ -156,13 +154,16 @@ export default function AdminLayout({
 
         {/* Logout */}
         <div className="absolute bottom-4 left-4 right-4">
-          <Link
-            href="/login"
-            className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-destructive hover:bg-destructive/10 transition-colors"
+          <button
+            onClick={async () => {
+              await fetch('/api/auth/logout', { method: 'POST' });
+              router.push('/login');
+            }}
+            className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-destructive hover:bg-destructive/10 transition-colors w-full"
           >
             <LogOut className="h-5 w-5" />
             Logout
-          </Link>
+          </button>
         </div>
       </aside>
 
