@@ -40,7 +40,7 @@ export default function ContactPage() {
 
   return (
     <main className="min-h-screen bg-background">
-      <Navbar isLoggedIn={false} />
+      <Navbar />
 
       {/* Hero Section */}
       <section className="pt-24 pb-16 bg-gradient-to-b from-card to-background">

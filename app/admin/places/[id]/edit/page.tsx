@@ -38,6 +38,11 @@ export default function EditPlacePage() {
     reviewCount: 0,
     isMustVisit: false,
     coordinates: { lat: 0, lng: 0 },
+    videoUrl: "",
+    instagramUrl: "",
+    tiktokUrl: "",
+    facebookUrl: "",
+    websiteUrl: "",
   });
 
   useEffect(() => {
@@ -57,6 +62,11 @@ export default function EditPlacePage() {
             reviewCount: d.place.reviewCount || 0,
             isMustVisit: d.place.isMustVisit || false,
             coordinates: d.place.coordinates || { lat: 0, lng: 0 },
+            videoUrl: d.place.videoUrl || "",
+            instagramUrl: d.place.instagramUrl || "",
+            tiktokUrl: d.place.tiktokUrl || "",
+            facebookUrl: d.place.facebookUrl || "",
+            websiteUrl: d.place.websiteUrl || "",
           });
         }
         setIsLoading(false);
@@ -264,6 +274,60 @@ export default function EditPlacePage() {
                   />
                 </div>
               )}
+            </div>
+          </div>
+
+          {/* Media & Social */}
+          <div className="bg-card rounded-xl border border-border p-6">
+            <h2 className="font-semibold mb-4">Media & Social</h2>
+            <div className="space-y-4">
+              <div>
+                <label className="text-sm font-medium mb-2 block">Video URL (YouTube/TikTok)</label>
+                <Input
+                  name="videoUrl"
+                  value={formData.videoUrl}
+                  onChange={handleChange}
+                  placeholder="https://youtube.com/watch?v=..."
+                />
+              </div>
+              <div className="grid sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm font-medium mb-2 block">Instagram URL</label>
+                  <Input
+                    name="instagramUrl"
+                    value={formData.instagramUrl}
+                    onChange={handleChange}
+                    placeholder="https://instagram.com/..."
+                  />
+                </div>
+                <div>
+                  <label className="text-sm font-medium mb-2 block">TikTok URL</label>
+                  <Input
+                    name="tiktokUrl"
+                    value={formData.tiktokUrl}
+                    onChange={handleChange}
+                    placeholder="https://tiktok.com/@..."
+                  />
+                </div>
+                <div>
+                  <label className="text-sm font-medium mb-2 block">Facebook URL</label>
+                  <Input
+                    name="facebookUrl"
+                    value={formData.facebookUrl}
+                    onChange={handleChange}
+                    placeholder="https://facebook.com/..."
+                  />
+                </div>
+                <div>
+                  <label className="text-sm font-medium mb-2 block">Website URL</label>
+                  <Input
+                    name="websiteUrl"
+                    value={formData.websiteUrl}
+                    onChange={handleChange}
+                    placeholder="https://..."
+                  />
+                </div>
+              </div>
             </div>
           </div>
         </div>

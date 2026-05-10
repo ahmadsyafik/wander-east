@@ -52,7 +52,7 @@ export default function LeaderboardPage() {
 
   return (
     <main className="min-h-screen bg-background">
-      <Navbar isLoggedIn={true} />
+      <Navbar />
 
       {/* Header */}
       <section className="pt-24 pb-8 bg-gradient-to-b from-card to-background">

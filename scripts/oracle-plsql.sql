@@ -27,50 +27,68 @@ END;
 
 -- 3. Auto-update place rating & review_count when review is inserted
 CREATE OR REPLACE TRIGGER trg_review_after_insert
-AFTER INSERT ON reviews
-FOR EACH ROW
-DECLARE
-    v_avg_rating NUMBER;
-    v_count NUMBER;
-BEGIN
-    -- Only count approved reviews for rating
-    SELECT NVL(ROUND(AVG(rating), 1), 0), COUNT(*)
-    INTO v_avg_rating, v_count
-    FROM reviews
-    WHERE place_id = :NEW.place_id AND status = 'approved';
+FOR INSERT ON reviews
+COMPOUND TRIGGER
+    TYPE t_ids IS TABLE OF NUMBER;
+    v_place_ids t_ids := t_ids();
+    v_user_ids t_ids := t_ids();
 
-    UPDATE places
-    SET rating = v_avg_rating,
-        review_count = v_count,
-        updated_at = CURRENT_TIMESTAMP
-    WHERE id = :NEW.place_id;
+    AFTER EACH ROW IS
+    BEGIN
+        v_place_ids.EXTEND;
+        v_place_ids(v_place_ids.COUNT) := :NEW.place_id;
+        v_user_ids.EXTEND;
+        v_user_ids(v_user_ids.COUNT) := :NEW.user_id;
 
-    -- Add XP to user for writing review (+100 XP)
-    UPDATE users
-    SET xp = xp + 100,
-        user_level = FLOOR((xp + 100) / 500) + 1
-    WHERE id = :NEW.user_id;
+        -- Update XP (Safe in row-level)
+        UPDATE users
+        SET xp = xp + 100,
+            user_level = FLOOR((xp + 100) / 500) + 1
+        WHERE id = :NEW.user_id;
+    END AFTER EACH ROW;
+
+    AFTER STATEMENT IS
+    BEGIN
+        FOR i IN 1..v_place_ids.COUNT LOOP
+            UPDATE places
+            SET (rating, review_count) = (
+                SELECT NVL(ROUND(AVG(rating), 1), 0), COUNT(*)
+                FROM reviews
+                WHERE place_id = v_place_ids(i) AND status = 'approved'
+            ),
+            updated_at = CURRENT_TIMESTAMP
+            WHERE id = v_place_ids(i);
+        END LOOP;
+    END AFTER STATEMENT;
 END;
 /
 
 -- 4. Auto-update place rating when review is deleted
 CREATE OR REPLACE TRIGGER trg_review_after_delete
-AFTER DELETE ON reviews
-FOR EACH ROW
-DECLARE
-    v_avg_rating NUMBER;
-    v_count NUMBER;
-BEGIN
-    SELECT NVL(ROUND(AVG(rating), 1), 0), COUNT(*)
-    INTO v_avg_rating, v_count
-    FROM reviews
-    WHERE place_id = :OLD.place_id AND status = 'approved';
+FOR DELETE ON reviews
+COMPOUND TRIGGER
+    TYPE t_ids IS TABLE OF NUMBER;
+    v_place_ids t_ids := t_ids();
 
-    UPDATE places
-    SET rating = v_avg_rating,
-        review_count = v_count,
-        updated_at = CURRENT_TIMESTAMP
-    WHERE id = :OLD.place_id;
+    AFTER EACH ROW IS
+    BEGIN
+        v_place_ids.EXTEND;
+        v_place_ids(v_place_ids.COUNT) := :OLD.place_id;
+    END AFTER EACH ROW;
+
+    AFTER STATEMENT IS
+    BEGIN
+        FOR i IN 1..v_place_ids.COUNT LOOP
+            UPDATE places
+            SET (rating, review_count) = (
+                SELECT NVL(ROUND(AVG(rating), 1), 0), COUNT(*)
+                FROM reviews
+                WHERE place_id = v_place_ids(i) AND status = 'approved'
+            ),
+            updated_at = CURRENT_TIMESTAMP
+            WHERE id = v_place_ids(i);
+        END LOOP;
+    END AFTER STATEMENT;
 END;
 /
 

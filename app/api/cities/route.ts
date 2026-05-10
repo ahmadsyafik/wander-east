@@ -16,6 +16,8 @@ export async function GET() {
         image: c.IMAGE_URL,
         description: c.DESCRIPTION,
         placeCount: c.PLACE_COUNT,
+        latitude: c.LATITUDE,
+        longitude: c.LONGITUDE,
       })),
     });
   } catch (error) {

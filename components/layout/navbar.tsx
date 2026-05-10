@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -10,7 +10,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Menu, X, Bell, LogOut } from "lucide-react";
+import { Menu, X, Bell, LogOut, Check } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const serifFont = { fontFamily: "'DM Serif Display', Georgia, serif" };
@@ -19,31 +19,109 @@ interface NavbarProps {
   isLoggedIn?: boolean;
 }
 
+interface Notification {
+  id: number;
+  message: string;
+  type: string;
+  isRead: boolean;
+  link: string;
+  createdAt: string;
+}
+
 export function Navbar({ isLoggedIn = true }: NavbarProps) {
   const pathname = usePathname();
   const router = useRouter();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [unreadCount, setUnreadCount] = useState(0);
 
-  const navLinks = [
-    { href: "/explore", label: "Explore" },
-    { href: "/map", label: "Map" },
-    { href: "/leaderboard", label: "Leaderboard" },
-    { href: "/profile", label: "Profile" },
-  ];
+  const isLandingPage = ["/", "/about", "/contact", "/privacy", "/terms"].includes(pathname);
+
+  const navLinks = isLandingPage
+    ? [
+        { href: "/about", label: "About" },
+        { href: "/contact", label: "Contact" },
+        { href: "/privacy", label: "Privacy" },
+        { href: "/terms", label: "Terms" },
+      ]
+    : [
+        { href: "/explore", label: "Explore" },
+        { href: "/map", label: "Map" },
+        { href: "/leaderboard", label: "Leaderboard" },
+        { href: "/profile", label: "Profile" },
+      ];
 
   const isActive = (href: string) => pathname === href;
 
-  const handleLogout = () => {
-    // In real app, this would clear auth state
+  const handleLogout = async () => {
+    await fetch("/api/auth/logout", { method: "POST" });
     router.push("/login");
   };
 
-  // Dummy notifications
-  const notifications = [
-    { id: 1, message: "Selamat! Kamu naik ke Level 13", time: "2 jam lalu" },
-    { id: 2, message: "Review kamu di Tumpak Sewu mendapat 5 likes", time: "5 jam lalu" },
-    { id: 3, message: "Badge baru: Mountain King unlocked!", time: "1 hari lalu" },
-  ];
+  const fetchNotifications = useCallback(async () => {
+    if (!isLoggedIn) return;
+    try {
+      const res = await fetch("/api/notifications");
+      if (res.ok) {
+        const data = await res.json();
+        setNotifications(data.notifications || []);
+        setUnreadCount(data.unreadCount || 0);
+      }
+    } catch {
+      // Fail silently — notifications are non-critical
+    }
+  }, [isLoggedIn]);
+
+  useEffect(() => {
+    fetchNotifications();
+    // Poll every 30 seconds for new notifications
+    const interval = setInterval(fetchNotifications, 30000);
+    return () => clearInterval(interval);
+  }, [fetchNotifications]);
+
+  const markAsRead = async (notifId: number) => {
+    try {
+      await fetch("/api/notifications", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ notificationId: notifId }),
+      });
+      setNotifications((prev) =>
+        prev.map((n) => (n.id === notifId ? { ...n, isRead: true } : n))
+      );
+      setUnreadCount((prev) => Math.max(0, prev - 1));
+    } catch {
+      // Fail silently
+    }
+  };
+
+  const markAllAsRead = async () => {
+    try {
+      await fetch("/api/notifications", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ markAllRead: true }),
+      });
+      setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
+      setUnreadCount(0);
+    } catch {
+      // Fail silently
+    }
+  };
+
+  const formatTime = (dateStr: string) => {
+    const now = new Date();
+    const date = new Date(dateStr);
+    const diffMs = now.getTime() - date.getTime();
+    const diffMin = Math.floor(diffMs / 60000);
+    if (diffMin < 1) return "Baru saja";
+    if (diffMin < 60) return `${diffMin} menit lalu`;
+    const diffHours = Math.floor(diffMin / 60);
+    if (diffHours < 24) return `${diffHours} jam lalu`;
+    const diffDays = Math.floor(diffHours / 24);
+    if (diffDays < 7) return `${diffDays} hari lalu`;
+    return date.toLocaleDateString("id-ID");
+  };
 
   return (
     <header className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-md border-b border-border">
@@ -73,7 +151,7 @@ export function Navbar({ isLoggedIn = true }: NavbarProps) {
             ))}
           </div>
 
-          {/* Right Section - Always show notification and logout for logged in users */}
+          {/* Right Section */}
           <div className="flex items-center gap-2">
             {isLoggedIn ? (
               <>
@@ -82,19 +160,57 @@ export function Navbar({ isLoggedIn = true }: NavbarProps) {
                   <DropdownMenuTrigger asChild>
                     <Button variant="ghost" size="icon" className="relative">
                       <Bell className="h-5 w-5" />
-                      <span className="absolute top-1 right-1 w-2 h-2 bg-primary rounded-full" />
+                      {unreadCount > 0 && (
+                        <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] bg-primary text-primary-foreground text-[10px] font-bold rounded-full flex items-center justify-center px-1">
+                          {unreadCount > 9 ? "9+" : unreadCount}
+                        </span>
+                      )}
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end" className="w-80">
-                    <div className="px-3 py-2 border-b border-border">
+                    <div className="px-3 py-2 border-b border-border flex items-center justify-between">
                       <p className="font-medium">Notifications</p>
+                      {unreadCount > 0 && (
+                        <button
+                          onClick={markAllAsRead}
+                          className="text-xs text-primary hover:underline flex items-center gap-1"
+                        >
+                          <Check className="h-3 w-3" />
+                          Mark all read
+                        </button>
+                      )}
                     </div>
-                    {notifications.map((notif) => (
-                      <DropdownMenuItem key={notif.id} className="flex flex-col items-start py-3 cursor-pointer">
-                        <p className="text-sm">{notif.message}</p>
-                        <p className="text-xs text-muted-foreground mt-1">{notif.time}</p>
-                      </DropdownMenuItem>
-                    ))}
+                    {notifications.length > 0 ? (
+                      notifications.slice(0, 8).map((notif) => (
+                        <DropdownMenuItem
+                          key={notif.id}
+                          className={cn(
+                            "flex flex-col items-start py-3 cursor-pointer",
+                            !notif.isRead && "bg-primary/5"
+                          )}
+                          onClick={() => {
+                            if (!notif.isRead) markAsRead(notif.id);
+                            if (notif.link) router.push(notif.link);
+                          }}
+                        >
+                          <div className="flex items-start gap-2 w-full">
+                            {!notif.isRead && (
+                              <span className="w-2 h-2 rounded-full bg-primary mt-1.5 flex-shrink-0" />
+                            )}
+                            <div className={cn("flex-1", notif.isRead && "pl-4")}>
+                              <p className="text-sm">{notif.message}</p>
+                              <p className="text-xs text-muted-foreground mt-1">
+                                {formatTime(notif.createdAt)}
+                              </p>
+                            </div>
+                          </div>
+                        </DropdownMenuItem>
+                      ))
+                    ) : (
+                      <div className="px-3 py-6 text-center text-sm text-muted-foreground">
+                        Belum ada notifikasi
+                      </div>
+                    )}
                   </DropdownMenuContent>
                 </DropdownMenu>
 

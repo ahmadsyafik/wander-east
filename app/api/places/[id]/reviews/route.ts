@@ -54,20 +54,32 @@ export async function POST(request: Request, { params }: Params) {
       return NextResponse.json({ error: 'Rating must be between 1 and 5' }, { status: 400 });
     }
 
+    // Verify user has checked in at this place
+    const visits = await query(
+      'SELECT COUNT(*) AS visit_count FROM user_visits WHERE user_id = :userId AND place_id = :placeId',
+      { userId: auth.userId, placeId: parseInt(id) }
+    );
+    if (!visits.length || (visits[0] as Record<string, number>).VISIT_COUNT === 0) {
+      return NextResponse.json(
+        { error: 'Anda harus check-in terlebih dahulu sebelum memberikan review' },
+        { status: 403 }
+      );
+    }
+
     const result = await execute(
       `INSERT INTO reviews (place_id, user_id, rating, review_comment)
-       VALUES (:placeId, :userId, :rating, :comment)
-       RETURNING id INTO :id`,
+       VALUES (:placeId, :userId, :rating, :review_comment)
+       RETURNING id INTO :reviewId`,
       {
         placeId: parseInt(id),
         userId: auth.userId,
         rating,
-        comment: comment || null,
-        id: { dir: oracledb.BIND_OUT, type: oracledb.NUMBER },
+        review_comment: comment || null,
+        reviewId: { dir: oracledb.BIND_OUT, type: oracledb.NUMBER },
       }
     );
 
-    const reviewId = (result.outBinds as { id: number[] }).id[0];
+    const reviewId = (result.outBinds as { reviewId: number[] }).reviewId[0];
 
     // Update achievement progress
     await execute(

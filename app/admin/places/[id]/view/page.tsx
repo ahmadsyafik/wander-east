@@ -15,6 +15,10 @@ import {
   Utensils,
   ExternalLink,
   RefreshCw,
+  Instagram,
+  Globe,
+  Play,
+  Facebook,
 } from "lucide-react";
 
 const serifFont = { fontFamily: "'DM Serif Display', Georgia, serif" };
@@ -137,6 +141,49 @@ export default function ViewPlacePage() {
               </div>
             </div>
           </div>
+
+          {/* Media & Social */}
+          {(place.videoUrl || place.instagramUrl || place.tiktokUrl || place.facebookUrl || place.websiteUrl) && (
+            <div className="bg-card rounded-xl border border-border p-6">
+              <h2 className="font-semibold mb-4">Media & Social</h2>
+              <div className="space-y-4">
+                {place.videoUrl && (
+                  <div>
+                    <label className="text-sm text-muted-foreground flex items-center gap-1"><Play className="h-3 w-3" /> Video</label>
+                    <a href={place.videoUrl} target="_blank" rel="noopener noreferrer" className="text-sm text-primary hover:underline break-all">
+                      {place.videoUrl}
+                    </a>
+                  </div>
+                )}
+                <div className="grid sm:grid-cols-2 gap-4">
+                  {place.instagramUrl && (
+                    <div>
+                      <label className="text-sm text-muted-foreground flex items-center gap-1"><Instagram className="h-3 w-3" /> Instagram</label>
+                      <a href={place.instagramUrl} target="_blank" rel="noopener noreferrer" className="text-sm text-primary hover:underline break-all">{place.instagramUrl}</a>
+                    </div>
+                  )}
+                  {place.tiktokUrl && (
+                    <div>
+                      <label className="text-sm text-muted-foreground">TikTok</label>
+                      <a href={place.tiktokUrl} target="_blank" rel="noopener noreferrer" className="text-sm text-primary hover:underline break-all">{place.tiktokUrl}</a>
+                    </div>
+                  )}
+                  {place.facebookUrl && (
+                    <div>
+                      <label className="text-sm text-muted-foreground flex items-center gap-1"><Facebook className="h-3 w-3" /> Facebook</label>
+                      <a href={place.facebookUrl} target="_blank" rel="noopener noreferrer" className="text-sm text-primary hover:underline break-all">{place.facebookUrl}</a>
+                    </div>
+                  )}
+                  {place.websiteUrl && (
+                    <div>
+                      <label className="text-sm text-muted-foreground flex items-center gap-1"><Globe className="h-3 w-3" /> Website</label>
+                      <a href={place.websiteUrl} target="_blank" rel="noopener noreferrer" className="text-sm text-primary hover:underline break-all">{place.websiteUrl}</a>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Sidebar */}

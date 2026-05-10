@@ -15,7 +15,7 @@ export function Footer() {
               <span className="text-foreground text-lg" style={serifFont}>East</span>
             </Link>
             <p className="text-sm text-muted-foreground">
-              &copy; 2024 Wander East. Curating East Java.
+              &copy; 2026 Wander East. Curating East Java.
             </p>
           </div>
 

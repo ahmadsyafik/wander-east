@@ -13,6 +13,7 @@ import {
   Award,
   Edit,
   Loader2,
+  Heart,
 } from "lucide-react";
 
 const serifFont = { fontFamily: "'DM Serif Display', Georgia, serif" };
@@ -39,6 +40,10 @@ export default function ProfilePage() {
   const router = useRouter();
   const [user, setUser] = useState<UserProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [favorites, setFavorites] = useState<Array<{
+    id: number; name: string; slug: string; image: string;
+    category: string; rating: number; cityName: string;
+  }>>([]);
 
   useEffect(() => {
     fetch("/api/auth/me")
@@ -53,6 +58,12 @@ export default function ProfilePage() {
       .catch(() => {
         router.push("/login");
       });
+
+    // Fetch favorites
+    fetch("/api/favorites")
+      .then((res) => res.ok ? res.json() : { favorites: [] })
+      .then((data) => setFavorites(data.favorites || []))
+      .catch(() => {});
   }, [router]);
 
   if (isLoading || !user) {
@@ -81,11 +92,19 @@ export default function ProfilePage() {
             {/* Avatar */}
             <div className="relative">
               <div className="w-28 h-28 rounded-full border-4 border-primary p-1">
-                <img
-                  src={user.avatar || "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=200"}
-                  alt={user.name}
-                  className="w-full h-full rounded-full object-cover"
-                />
+                {user.avatar ? (
+                  <img
+                    src={user.avatar}
+                    alt={user.name}
+                    className="w-full h-full rounded-full object-cover"
+                  />
+                ) : (
+                  <div className="w-full h-full rounded-full bg-gradient-to-br from-primary/80 to-teal-500 flex items-center justify-center">
+                    <span className="text-3xl font-bold text-white">
+                      {user.name?.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase()}
+                    </span>
+                  </div>
+                )}
               </div>
               <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 bg-primary text-primary-foreground text-xs font-bold px-3 py-1 rounded-full">
                 Lv. {user.level}
@@ -191,6 +210,56 @@ export default function ProfilePage() {
               <div className="text-center py-8 text-muted-foreground">
                 <Award className="h-12 w-12 mx-auto mb-4 opacity-50" />
                 <p>No badges yet. Start exploring to earn badges!</p>
+              </div>
+            )}
+          </div>
+        </div>
+      </section>
+
+      {/* Favorite Places */}
+      <section className="py-8">
+        <div className="container mx-auto px-4">
+          <div className="bg-card rounded-2xl p-6 border border-border">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-xl font-semibold flex items-center gap-2">
+                <Heart className="h-5 w-5 text-red-400" />
+                Favorite Places
+              </h2>
+            </div>
+
+            {favorites.length > 0 ? (
+              <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {favorites.map((fav) => (
+                  <Link
+                    key={fav.id}
+                    href={`/destination/${fav.slug}`}
+                    className="group bg-secondary rounded-xl overflow-hidden hover:ring-2 hover:ring-primary transition-all"
+                  >
+                    {fav.image && (
+                      <div className="aspect-video overflow-hidden">
+                        <img
+                          src={fav.image}
+                          alt={fav.name}
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+                        />
+                      </div>
+                    )}
+                    <div className="p-3">
+                      <p className="font-medium text-sm">{fav.name}</p>
+                      <div className="flex items-center gap-2 mt-1">
+                        <span className="text-xs text-muted-foreground">{fav.cityName}</span>
+                        <span className="text-xs text-yellow-400 flex items-center gap-0.5">
+                          <Star className="h-3 w-3 fill-current" /> {fav.rating}
+                        </span>
+                      </div>
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-8 text-muted-foreground">
+                <Heart className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                <p>Belum ada tempat favorit. Klik ❤️ di halaman destinasi!</p>
               </div>
             )}
           </div>

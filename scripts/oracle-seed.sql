@@ -47,7 +47,7 @@ INSERT INTO cities (name, slug, image_url, description) VALUES (
 INSERT INTO users (name, email, password_hash, avatar_url, user_level, xp, role) VALUES (
     'Admin Wander',
     'admin@wandereast.com',
-    '$2a$12$LJ3m4yGBbGMgUeIdW8m.f.YB9NN/fNNg7IvJLvHhhlWQNlQ/X9Fqu',
+    '$2b$12$BTogcS1KdI0SeNwiNBFZSegjagme1zuhX8u23kmJbozCNvrcu0NpS',
     'https://images.unsplash.com/photo-1560250097-0b93528c311a?w=200&q=80',
     99, 99999, 'admin'
 );
@@ -59,7 +59,7 @@ INSERT INTO users (name, email, password_hash, avatar_url, user_level, xp, role)
 INSERT INTO users (name, email, password_hash, avatar_url, user_level, xp, role) VALUES (
     'Budi Explorer',
     'user@example.com',
-    '$2a$12$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi',
+    '$2b$12$uhZo4pQ76fNZyeYKpw8mi.AWNxOzH4qwZSfx7y4q/mfxbH9ruG9fi',
     'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=200&q=80',
     12, 2450, 'user'
 );

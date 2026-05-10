@@ -25,6 +25,11 @@ export async function PUT(request: Request, { params }: Params) {
       binds.is_banned = body.isBanned ? 1 : 0;
     }
 
+    if (body.status !== undefined) {
+      fields.push('is_banned = :is_banned');
+      binds.is_banned = body.status === 'banned' ? 1 : 0;
+    }
+
     if (body.role !== undefined) {
       fields.push('role = :role');
       binds.role = body.role;

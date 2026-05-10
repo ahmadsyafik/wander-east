@@ -1,97 +1,229 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import Link from "next/link";
-import dynamic from "next/dynamic";
 import { Navbar } from "@/components/layout/navbar";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Star, Utensils, Mountain, X, Loader2 } from "lucide-react";
+import {
+  GoogleMap,
+  useJsApiLoader,
+  MarkerF,
+  InfoWindowF,
+} from "@react-google-maps/api";
 
 const serifFont = { fontFamily: "'DM Serif Display', Georgia, serif" };
 
-// Dynamic import for Leaflet (SSR not supported)
-const MapContainer = dynamic(
-  () => import("react-leaflet").then((mod) => mod.MapContainer),
-  { ssr: false }
-);
-const TileLayer = dynamic(
-  () => import("react-leaflet").then((mod) => mod.TileLayer),
-  { ssr: false }
-);
-const Marker = dynamic(
-  () => import("react-leaflet").then((mod) => mod.Marker),
-  { ssr: false }
-);
-const Popup = dynamic(
-  () => import("react-leaflet").then((mod) => mod.Popup),
-  { ssr: false }
-);
+interface PlaceData {
+  id: string;
+  name: string;
+  slug: string;
+  description: string;
+  category: string;
+  cityId: string;
+  cityName: string;
+  image: string;
+  rating: number;
+  reviewCount: number;
+  coordinates?: { lat: number; lng: number } | null;
+  isMustVisit?: boolean;
+}
 
-// Real coordinates for East Java cities (accurate from Google Maps)
-const cityCoordinates: Record<string, { lat: number; lng: number }> = {
-  surabaya: { lat: -7.2575, lng: 112.7521 },
-  malang: { lat: -7.9666, lng: 112.6326 },
-  banyuwangi: { lat: -8.2191, lng: 114.3691 },
-  batu: { lat: -7.8672, lng: 112.5239 },
-  jember: { lat: -8.1845, lng: 113.6681 },
-  probolinggo: { lat: -7.7543, lng: 113.2159 },
+interface CityData {
+  id: string;
+  name: string;
+  slug: string;
+  latitude?: number;
+  longitude?: number;
+}
+
+// East Java center coordinates
+const EAST_JAVA_CENTER = { lat: -7.8, lng: 113.2 };
+
+const mapContainerStyle = {
+  width: "100%",
+  height: "100%",
 };
 
-// Real coordinates for places
-const placeCoordinates: Record<string, { lat: number; lng: number }> = {
-  "1": { lat: -8.2301, lng: 112.9169 }, // Tumpak Sewu
-  "2": { lat: -8.0584, lng: 114.2419 }, // Kawah Ijen
-  "3": { lat: -8.4761, lng: 113.8231 }, // Teluk Hijau
-  "4": { lat: -8.4317, lng: 113.5311 }, // Pantai Papuma
-  "5": { lat: -7.9425, lng: 112.9530 }, // Gunung Bromo
-  "6": { lat: -8.5842, lng: 114.0275 }, // Pulau Merah
-  "7": { lat: -7.8711, lng: 112.4651 }, // Coban Rondo
-  "8": { lat: -7.8856, lng: 112.5339 }, // Jatim Park 2
-  "9": { lat: -7.2641, lng: 112.7474 }, // Rawon Nguling
-  "10": { lat: -7.2789, lng: 112.7378 }, // Rujak Cingur
-  "11": { lat: -7.9784, lng: 112.6371 }, // Bakso President
-  "12": { lat: -8.2112, lng: 114.3517 }, // Sego Tempong
-  "13": { lat: -7.2912, lng: 112.7380 }, // Pecel Rawon
-  "14": { lat: -7.2575, lng: 112.7488 }, // Sate Klopo
-  "15": { lat: -7.9789, lng: 112.6308 }, // Toko Oen
-  "16": { lat: -7.2689, lng: 112.7512 }, // Warung Leko
-};
+const darkMapStyle = [
+  { elementType: "geometry", stylers: [{ color: "#212121" }] },
+  { elementType: "labels.icon", stylers: [{ visibility: "off" }] },
+  { elementType: "labels.text.fill", stylers: [{ color: "#757575" }] },
+  { elementType: "labels.text.stroke", stylers: [{ color: "#212121" }] },
+  {
+    featureType: "administrative",
+    elementType: "geometry",
+    stylers: [{ color: "#757575" }],
+  },
+  {
+    featureType: "administrative.country",
+    elementType: "labels.text.fill",
+    stylers: [{ color: "#9e9e9e" }],
+  },
+  {
+    featureType: "administrative.locality",
+    elementType: "labels.text.fill",
+    stylers: [{ color: "#bdbdbd" }],
+  },
+  {
+    featureType: "poi",
+    elementType: "labels.text.fill",
+    stylers: [{ color: "#757575" }],
+  },
+  {
+    featureType: "poi.park",
+    elementType: "geometry",
+    stylers: [{ color: "#181818" }],
+  },
+  {
+    featureType: "poi.park",
+    elementType: "labels.text.fill",
+    stylers: [{ color: "#616161" }],
+  },
+  {
+    featureType: "road",
+    elementType: "geometry.fill",
+    stylers: [{ color: "#2c2c2c" }],
+  },
+  {
+    featureType: "road",
+    elementType: "labels.text.fill",
+    stylers: [{ color: "#8a8a8a" }],
+  },
+  {
+    featureType: "road.arterial",
+    elementType: "geometry",
+    stylers: [{ color: "#373737" }],
+  },
+  {
+    featureType: "road.highway",
+    elementType: "geometry",
+    stylers: [{ color: "#3c3c3c" }],
+  },
+  {
+    featureType: "road.highway.controlled_access",
+    elementType: "geometry",
+    stylers: [{ color: "#4e4e4e" }],
+  },
+  {
+    featureType: "transit",
+    elementType: "labels.text.fill",
+    stylers: [{ color: "#757575" }],
+  },
+  {
+    featureType: "water",
+    elementType: "geometry",
+    stylers: [{ color: "#000000" }],
+  },
+  {
+    featureType: "water",
+    elementType: "labels.text.fill",
+    stylers: [{ color: "#3d3d3d" }],
+  },
+];
 
 export default function MapPage() {
   const [selectedCity, setSelectedCity] = useState<string | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [selectedPlace, setSelectedPlace] = useState<string | null>(null);
-  const [isClient, setIsClient] = useState(false);
-  const [places, setPlaces] = useState<Array<{id: string; name: string; slug: string; description: string; category: string; cityId: string; cityName: string; image: string; rating: number; reviewCount: number; coordinates?: {lat: number; lng: number} | null}>>([]);
-  const [cities, setCities] = useState<Array<{id: string; name: string; slug: string}>>([]);
+  const [activeMarker, setActiveMarker] = useState<string | null>(null);
+  const [places, setPlaces] = useState<PlaceData[]>([]);
+  const [cities, setCities] = useState<CityData[]>([]);
+  const [mapCenter, setMapCenter] = useState(EAST_JAVA_CENTER);
+
+  const { isLoaded } = useJsApiLoader({
+    id: "google-map-script",
+    googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || "",
+  });
 
   useEffect(() => {
-    setIsClient(true);
-    fetch("/api/cities").then(r => r.json()).then(d => setCities(d.cities || []));
-    fetch("/api/places?limit=100").then(r => r.json()).then(d => setPlaces(d.places || []));
+    fetch("/api/cities")
+      .then((r) => r.json())
+      .then((d) => setCities(d.cities || []));
+    fetch("/api/places?limit=200")
+      .then((r) => r.json())
+      .then((d) => setPlaces(d.places || []));
   }, []);
 
-  const filteredPlaces = places.filter((place) => {
-    const matchesCity = !selectedCity || place.cityId === selectedCity;
-    const matchesCategory =
-      selectedCategory === "all" || place.category === selectedCategory;
-    return matchesCity && matchesCategory;
-  });
+  const filteredPlaces = useMemo(
+    () =>
+      places.filter((place) => {
+        const matchesCity = !selectedCity || place.cityId === selectedCity;
+        const matchesCategory =
+          selectedCategory === "all" || place.category === selectedCategory;
+        const hasCoords = place.coordinates?.lat && place.coordinates?.lng;
+        return matchesCity && matchesCategory && hasCoords;
+      }),
+    [places, selectedCity, selectedCategory]
+  );
 
   const currentPlace = places.find((p) => p.id === selectedPlace);
 
-  // East Java center coordinates
-  const eastJavaCenter: [number, number] = [-7.8, 113.2];
+  const handleCityChange = useCallback(
+    (cityId: string | null) => {
+      setSelectedCity(cityId);
+      if (cityId) {
+        const city = cities.find((c) => String(c.id) === cityId);
+        if (city?.latitude && city?.longitude) {
+          setMapCenter({ lat: city.latitude, lng: city.longitude });
+        }
+      } else {
+        setMapCenter(EAST_JAVA_CENTER);
+      }
+    },
+    [cities]
+  );
+
+  const mapOptions = useMemo(
+    () => ({
+      styles: darkMapStyle,
+      disableDefaultUI: false,
+      zoomControl: true,
+      mapTypeControl: false,
+      streetViewControl: false,
+      fullscreenControl: true,
+    }),
+    []
+  );
+
+  // Custom marker icon URLs using SVG data URIs
+  const wisataIcon = useMemo(
+    () =>
+      isLoaded
+        ? {
+            url: `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(
+              '<svg xmlns="http://www.w3.org/2000/svg" width="36" height="44" viewBox="0 0 36 44"><defs><filter id="s" x="-10%" y="-10%" width="130%" height="130%"><feDropShadow dx="0" dy="1" stdDeviation="1.5" flood-opacity="0.3"/></filter></defs><path d="M18 0C8.06 0 0 8.06 0 18c0 13.5 18 26 18 26s18-12.5 18-26C36 8.06 27.94 0 18 0z" fill="%2310b981" filter="url(%23s)"/><circle cx="18" cy="17" r="10" fill="white"/><path d="M12 22l3-5 2.5 3 3-7 3.5 9" fill="none" stroke="%2310b981" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><circle cx="22" cy="13" r="1.5" fill="%2310b981"/></svg>'
+            )}`,
+            scaledSize: new google.maps.Size(36, 44),
+          }
+        : undefined,
+    [isLoaded]
+  );
+
+  const kulinerIcon = useMemo(
+    () =>
+      isLoaded
+        ? {
+            url: `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(
+              '<svg xmlns="http://www.w3.org/2000/svg" width="36" height="44" viewBox="0 0 36 44"><defs><filter id="s" x="-10%" y="-10%" width="130%" height="130%"><feDropShadow dx="0" dy="1" stdDeviation="1.5" flood-opacity="0.3"/></filter></defs><path d="M18 0C8.06 0 0 8.06 0 18c0 13.5 18 26 18 26s18-12.5 18-26C36 8.06 27.94 0 18 0z" fill="%23f59e0b" filter="url(%23s)"/><circle cx="18" cy="17" r="10" fill="white"/><path d="M13 12v5c0 1.66 1.34 3 3 3h.5v4h3v-4h.5c1.66 0 3-1.34 3-3v-5h-2v4c0 .55-.45 1-1 1h-1v-5h-2v5h-1c-.55 0-1-.45-1-1v-4z" fill="%23f59e0b"/><path d="M24 12v4c0 1.1-.9 2-2 2v6h-1v-6c-1.1 0-2-.9-2-2v-4" fill="none" stroke="%23f59e0b" stroke-width="0" /></svg>'
+            )}`,
+            scaledSize: new google.maps.Size(36, 44),
+          }
+        : undefined,
+    [isLoaded]
+  );
 
   return (
     <main className="min-h-screen bg-background">
-      <Navbar isLoggedIn={true} />
+      <Navbar />
 
       <div className="pt-16 flex flex-col lg:flex-row h-[calc(100vh-4rem)]">
         {/* Sidebar */}
         <aside className="w-full lg:w-80 bg-card border-r border-border p-4 overflow-y-auto">
-          <h2 className="text-lg font-semibold mb-4" style={serifFont}>Explore Map</h2>
+          <h2 className="text-lg font-semibold mb-4" style={serifFont}>
+            Explore Map
+          </h2>
 
           {/* Filters */}
           <div className="space-y-4 mb-6">
@@ -116,7 +248,9 @@ export default function MapPage() {
                   Tourism
                 </Button>
                 <Button
-                  variant={selectedCategory === "kuliner" ? "default" : "outline"}
+                  variant={
+                    selectedCategory === "kuliner" ? "default" : "outline"
+                  }
                   size="sm"
                   onClick={() => setSelectedCategory("kuliner")}
                 >
@@ -133,7 +267,7 @@ export default function MapPage() {
               <select
                 className="w-full h-10 px-3 rounded-md border border-input bg-background text-sm"
                 value={selectedCity || ""}
-                onChange={(e) => setSelectedCity(e.target.value || null)}
+                onChange={(e) => handleCityChange(e.target.value || null)}
               >
                 <option value="">All Cities</option>
                 {cities.map((city) => (
@@ -150,10 +284,19 @@ export default function MapPage() {
             <p className="text-sm text-muted-foreground">
               {filteredPlaces.length} places found
             </p>
-            {filteredPlaces.slice(0, 10).map((place) => (
+            {filteredPlaces.slice(0, 20).map((place) => (
               <button
                 key={place.id}
-                onClick={() => setSelectedPlace(place.id)}
+                onClick={() => {
+                  setSelectedPlace(place.id);
+                  setActiveMarker(place.id);
+                  if (place.coordinates) {
+                    setMapCenter({
+                      lat: place.coordinates.lat,
+                      lng: place.coordinates.lng,
+                    });
+                  }
+                }}
                 className={`w-full text-left p-3 rounded-lg border transition-colors ${
                   selectedPlace === place.id
                     ? "border-primary bg-primary/10"
@@ -171,9 +314,17 @@ export default function MapPage() {
                     <p className="text-xs text-muted-foreground truncate">
                       {place.cityName}
                     </p>
-                    <div className="flex items-center gap-1 mt-1">
-                      <Star className="h-3 w-3 text-yellow-400 fill-yellow-400" />
-                      <span className="text-xs">{place.rating}</span>
+                    <div className="flex items-center gap-2 mt-1">
+                      <div className="flex items-center gap-1">
+                        <Star className="h-3 w-3 text-yellow-400 fill-yellow-400" />
+                        <span className="text-xs">{place.rating}</span>
+                      </div>
+                      <Badge
+                        variant="outline"
+                        className="text-[10px] px-1.5 py-0"
+                      >
+                        {place.category === "kuliner" ? "🍽" : "⛰️"}
+                      </Badge>
                     </div>
                   </div>
                 </div>
@@ -184,95 +335,70 @@ export default function MapPage() {
 
         {/* Map Area */}
         <div className="flex-1 relative">
-          {isClient ? (
-            <>
-              <link
-                rel="stylesheet"
-                href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
-                integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
-                crossOrigin=""
-              />
-              <MapContainer
-                center={eastJavaCenter}
-                zoom={8}
-                style={{ height: "100%", width: "100%" }}
-                className="z-0"
-              >
-                <TileLayer
-                  attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
-                  url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
-                />
-                
-                {/* City Markers */}
-                {cities.map((city) => {
-                  const coords = cityCoordinates[city.id];
-                  if (!coords) return null;
-                  
-                  const cityPlacesCount = places.filter(p => p.cityId === city.id).length;
-                  
-                  return (
-                    <Marker
-                      key={city.id}
-                      position={[coords.lat, coords.lng]}
-                      eventHandlers={{
-                        click: () => setSelectedCity(selectedCity === city.id ? null : city.id),
-                      }}
-                    >
-                      <Popup>
-                        <div className="text-center p-1">
-                          <p className="font-bold text-sm">{city.name}</p>
-                          <p className="text-xs text-gray-600">{cityPlacesCount} places</p>
-                          <Button 
-                            size="sm" 
-                            className="mt-2 h-7 text-xs"
-                            onClick={() => setSelectedCity(city.id)}
-                          >
-                            Filter by city
-                          </Button>
-                        </div>
-                      </Popup>
-                    </Marker>
-                  );
-                })}
-
-                {/* Place Markers (when filtered) */}
-                {selectedCity && filteredPlaces.map((place) => {
-                  const coords = placeCoordinates[place.id];
-                  if (!coords) return null;
-                  
-                  return (
-                    <Marker
-                      key={place.id}
-                      position={[coords.lat, coords.lng]}
-                      eventHandlers={{
-                        click: () => setSelectedPlace(place.id),
-                      }}
-                    >
-                      <Popup>
-                        <div className="p-1 min-w-[180px]">
-                          <img 
-                            src={place.image} 
+          {isLoaded ? (
+            <GoogleMap
+              mapContainerStyle={mapContainerStyle}
+              center={mapCenter}
+              zoom={selectedCity ? 11 : 8}
+              options={mapOptions}
+            >
+              {/* Place Markers */}
+              {filteredPlaces.map((place) => {
+                if (!place.coordinates) return null;
+                return (
+                  <MarkerF
+                    key={place.id}
+                    position={{
+                      lat: place.coordinates.lat,
+                      lng: place.coordinates.lng,
+                    }}
+                    icon={
+                      place.category === "kuliner"
+                        ? kulinerIcon
+                        : wisataIcon
+                    }
+                    onClick={() => {
+                      setActiveMarker(place.id);
+                      setSelectedPlace(place.id);
+                    }}
+                  >
+                    {activeMarker === place.id && (
+                      <InfoWindowF
+                        onCloseClick={() => setActiveMarker(null)}
+                      >
+                        <div className="p-1 min-w-[200px] max-w-[260px]">
+                          <img
+                            src={place.image}
                             alt={place.name}
-                            className="w-full h-20 object-cover rounded mb-2"
+                            className="w-full h-24 object-cover rounded mb-2"
                           />
-                          <p className="font-bold text-sm">{place.name}</p>
-                          <p className="text-xs text-gray-600">{place.cityName}</p>
+                          <p className="font-bold text-sm text-gray-900">
+                            {place.name}
+                          </p>
+                          <p className="text-xs text-gray-600">
+                            {place.cityName}
+                          </p>
                           <div className="flex items-center gap-1 mt-1">
                             <Star className="h-3 w-3 text-yellow-400 fill-yellow-400" />
-                            <span className="text-xs">{place.rating}</span>
+                            <span className="text-xs text-gray-800">
+                              {place.rating}
+                            </span>
+                            <span className="text-xs text-gray-500 ml-1">
+                              ({place.reviewCount} reviews)
+                            </span>
                           </div>
                           <Link href={`/destination/${place.slug}`}>
-                            <Button size="sm" className="mt-2 w-full h-7 text-xs">
+                            <button className="mt-2 w-full bg-emerald-600 text-white text-xs py-1.5 px-3 rounded-md hover:bg-emerald-700 transition-colors">
                               View Details
-                            </Button>
+                            </button>
                           </Link>
                         </div>
-                      </Popup>
-                    </Marker>
-                  );
-                })}
-              </MapContainer>
-            </>
+                      </InfoWindowF>
+                    )}
+                  </MarkerF>
+                );
+              })}
+            </GoogleMap>
           ) : (
             <div className="h-full w-full flex items-center justify-center bg-card">
               <div className="flex flex-col items-center gap-3">
@@ -284,9 +410,12 @@ export default function MapPage() {
 
           {/* Selected Place Info Card */}
           {currentPlace && (
-            <div className="absolute bottom-4 left-4 right-4 md:left-auto md:right-4 md:w-80 bg-card rounded-xl border border-border p-4 shadow-xl z-[1000]">
+            <div className="absolute bottom-4 left-4 right-4 md:left-auto md:right-4 md:w-80 bg-card rounded-xl border border-border p-4 shadow-xl z-[10]">
               <button
-                onClick={() => setSelectedPlace(null)}
+                onClick={() => {
+                  setSelectedPlace(null);
+                  setActiveMarker(null);
+                }}
                 className="absolute top-2 right-2 p-1 rounded-full hover:bg-secondary"
               >
                 <X className="h-4 w-4" />
@@ -298,7 +427,9 @@ export default function MapPage() {
                   className="w-20 h-20 rounded-lg object-cover"
                 />
                 <div className="flex-1 min-w-0">
-                  <h3 className="font-semibold truncate">{currentPlace.name}</h3>
+                  <h3 className="font-semibold truncate">
+                    {currentPlace.name}
+                  </h3>
                   <p className="text-sm text-muted-foreground">
                     {currentPlace.cityName}
                   </p>
@@ -327,14 +458,20 @@ export default function MapPage() {
           )}
 
           {/* Legend */}
-          <div className="absolute top-4 right-4 bg-card/90 backdrop-blur-sm rounded-lg p-3 border border-border z-[1000]">
+          <div className="absolute top-4 right-4 bg-card/90 backdrop-blur-sm rounded-lg p-3 border border-border z-[10]">
             <p className="text-xs font-medium mb-2">Legend</p>
-            <div className="flex items-center gap-2 text-xs">
-              <div className="w-3 h-3 rounded-full bg-primary" />
-              <span>City / Place</span>
+            <div className="space-y-1.5">
+              <div className="flex items-center gap-2 text-xs">
+                <div className="w-3 h-3 rounded-full bg-green-500" />
+                <span>Tourism</span>
+              </div>
+              <div className="flex items-center gap-2 text-xs">
+                <div className="w-3 h-3 rounded-full bg-orange-500" />
+                <span>Culinary</span>
+              </div>
             </div>
             <p className="text-xs text-muted-foreground mt-2">
-              Click a city to see places
+              {filteredPlaces.length} locations
             </p>
           </div>
         </div>

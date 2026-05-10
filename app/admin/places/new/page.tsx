@@ -34,6 +34,11 @@ export default function AddPlacePage() {
     difficulty: "",
     isMustVisit: false,
     tags: "",
+    videoUrl: "",
+    instagramUrl: "",
+    tiktokUrl: "",
+    facebookUrl: "",
+    websiteUrl: "",
   });
   const [images, setImages] = useState<string[]>([]);
 
@@ -274,6 +279,60 @@ export default function AddPlacePage() {
             <Label htmlFor="mustVisit" className="cursor-pointer">
               Mark as Must Visit destination
             </Label>
+          </div>
+        </div>
+
+        {/* Media & Social */}
+        <div className="bg-card rounded-xl border border-border p-6">
+          <h2 className="text-lg font-semibold mb-4">Media & Social</h2>
+          <div className="grid gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="videoUrl">Video URL (YouTube/TikTok)</Label>
+              <Input
+                id="videoUrl"
+                placeholder="https://youtube.com/watch?v=... or https://tiktok.com/..."
+                value={formData.videoUrl}
+                onChange={(e) => setFormData({ ...formData, videoUrl: e.target.value })}
+              />
+            </div>
+            <div className="grid md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="instagramUrl">Instagram URL</Label>
+                <Input
+                  id="instagramUrl"
+                  placeholder="https://instagram.com/..."
+                  value={formData.instagramUrl}
+                  onChange={(e) => setFormData({ ...formData, instagramUrl: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="tiktokUrl">TikTok URL</Label>
+                <Input
+                  id="tiktokUrl"
+                  placeholder="https://tiktok.com/@..."
+                  value={formData.tiktokUrl}
+                  onChange={(e) => setFormData({ ...formData, tiktokUrl: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="facebookUrl">Facebook URL</Label>
+                <Input
+                  id="facebookUrl"
+                  placeholder="https://facebook.com/..."
+                  value={formData.facebookUrl}
+                  onChange={(e) => setFormData({ ...formData, facebookUrl: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="websiteUrl">Website URL</Label>
+                <Input
+                  id="websiteUrl"
+                  placeholder="https://..."
+                  value={formData.websiteUrl}
+                  onChange={(e) => setFormData({ ...formData, websiteUrl: e.target.value })}
+                />
+              </div>
+            </div>
           </div>
         </div>
 

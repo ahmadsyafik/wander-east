@@ -23,6 +23,11 @@ import {
   Send,
   ExternalLink,
   Loader2,
+  Instagram,
+  Globe,
+  Play,
+  LocateFixed,
+  Facebook,
 } from "lucide-react";
 
 const serifFont = { fontFamily: "'DM Serif Display', Georgia, serif" };
@@ -46,19 +51,28 @@ interface PlaceDetail {
   estimatedDuration: string;
   difficulty: string;
   isMustVisit: boolean;
+  googlePlaceId: string;
+  videoUrl: string;
+  instagramUrl: string;
+  tiktokUrl: string;
+  facebookUrl: string;
+  websiteUrl: string;
   tags: string[];
   reviews: Review[];
 }
 
 interface Review {
-  id: number;
+  id: number | string;
   rating: number;
   comment: string;
   createdAt: string;
-  userId: number;
+  userId?: number;
   userName: string;
   userAvatar: string;
   userLevel: number;
+  source?: 'google' | 'explorer';
+  relativeTime?: string;
+  photos?: string[];
 }
 
 export default function DestinationDetailPage({
@@ -77,7 +91,9 @@ export default function DestinationDetailPage({
   const [newRating, setNewRating] = useState(0);
   const [hoverRating, setHoverRating] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isCheckingIn, setIsCheckingIn] = useState(false);
   const [relatedPlaces, setRelatedPlaces] = useState<PlaceDetail[]>([]);
+  const [allReviews, setAllReviews] = useState<Review[]>([]);
 
   useEffect(() => {
     async function fetchPlace() {
@@ -91,6 +107,23 @@ export default function DestinationDetailPage({
         const data = await res.json();
         setPlace(data.place);
 
+        // Mark explorer reviews
+        const explorerReviews: Review[] = (data.place?.reviews || []).map((r: Review) => ({
+          ...r, source: 'explorer' as const,
+        }));
+
+        // Fetch Google reviews and merge
+        try {
+          const gRes = await fetch(`/api/places/${data.place.id}/google-reviews`);
+          const gData = await gRes.json();
+          const googleReviews: Review[] = (gData.reviews || []).map((r: Review) => ({
+            ...r, source: 'google' as const,
+          }));
+          setAllReviews([...explorerReviews, ...googleReviews]);
+        } catch {
+          setAllReviews(explorerReviews);
+        }
+
         // Fetch related places from same city
         if (data.place?.cityName) {
           const relRes = await fetch(`/api/places?city=${data.place.cityName.toLowerCase()}&limit=3`);
@@ -98,6 +131,30 @@ export default function DestinationDetailPage({
           setRelatedPlaces(
             (relData.places || []).filter((p: PlaceDetail) => p.id !== data.place.id).slice(0, 3)
           );
+        }
+
+        // Check if user has favorited this place
+        try {
+          const favRes = await fetch('/api/favorites');
+          if (favRes.ok) {
+            const favData = await favRes.json();
+            const isFav = (favData.favorites || []).some(
+              (f: { id: number }) => f.id === data.place.id
+            );
+            setIsFavorite(isFav);
+          }
+        } catch {
+          // Not logged in or error — ignore
+        }
+
+        // Check if user has visited this place
+        try {
+          const visitRes = await fetch('/api/auth/me');
+          if (visitRes.ok) {
+            // User is logged in — we can check visits via the checkin API later
+          }
+        } catch {
+          // Not logged in
         }
       } catch {
         setNotFound(true);
@@ -110,7 +167,7 @@ export default function DestinationDetailPage({
   if (isLoading) {
     return (
       <main className="min-h-screen bg-background">
-        <Navbar isLoggedIn={true} />
+        <Navbar />
         <div className="flex items-center justify-center pt-32 pb-20">
           <Loader2 className="h-8 w-8 animate-spin text-primary" />
           <span className="ml-3 text-muted-foreground">Loading destination...</span>
@@ -123,7 +180,7 @@ export default function DestinationDetailPage({
   if (notFound || !place) {
     return (
       <main className="min-h-screen bg-background">
-        <Navbar isLoggedIn={true} />
+        <Navbar />
         <div className="container mx-auto px-4 pt-24 pb-20 text-center">
           <h1 className="text-2xl font-bold mb-4">Destination not found</h1>
           <Button asChild>
@@ -146,22 +203,41 @@ export default function DestinationDetailPage({
   };
 
   const handleCheckin = async () => {
+    setIsCheckingIn(true);
     try {
+      // Get user GPS location
+      const position = await new Promise<GeolocationPosition>((resolve, reject) => {
+        if (!navigator.geolocation) {
+          reject(new Error('GPS tidak tersedia di browser Anda'));
+          return;
+        }
+        navigator.geolocation.getCurrentPosition(resolve, (err) => {
+          if (err.code === 1) reject(new Error('Izin lokasi ditolak. Aktifkan GPS untuk check-in.'));
+          else if (err.code === 2) reject(new Error('Lokasi tidak tersedia. Coba lagi.'));
+          else reject(new Error('Timeout mendapatkan lokasi. Coba lagi.'));
+        }, { enableHighAccuracy: true, timeout: 10000 });
+      });
+
       const res = await fetch("/api/gamification/checkin", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ placeId: place.id }),
+        body: JSON.stringify({
+          placeId: place.id,
+          userLat: position.coords.latitude,
+          userLng: position.coords.longitude,
+        }),
       });
       const data = await res.json();
       if (res.ok) {
         setIsVisited(true);
-        alert(data.message || "Check-in successful! +50 XP");
+        alert(data.message || "Check-in berhasil! +50 XP 🎉");
       } else {
-        alert(data.error || "Check-in failed");
+        alert(data.error || "Check-in gagal");
       }
-    } catch {
-      alert("Please login to check in");
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Silakan login untuk check-in");
     }
+    setIsCheckingIn(false);
   };
 
   const handleSubmitReview = async (e: React.FormEvent) => {
@@ -195,7 +271,7 @@ export default function DestinationDetailPage({
 
   return (
     <main className="min-h-screen bg-background">
-      <Navbar isLoggedIn={true} />
+      <Navbar />
 
       {/* Hero Image Gallery */}
       <section className="pt-16 relative">
@@ -272,21 +348,58 @@ export default function DestinationDetailPage({
                   <Button
                     variant={isFavorite ? "default" : "outline"}
                     size="icon"
-                    onClick={() => setIsFavorite(!isFavorite)}
+                    onClick={async () => {
+                      if (!place) return;
+                      try {
+                        const res = await fetch('/api/favorites', {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({ placeId: place.id }),
+                        });
+                        if (res.ok) {
+                          const data = await res.json();
+                          setIsFavorite(data.isFavorite);
+                        } else {
+                          alert('Login terlebih dahulu untuk menyimpan tempat favorit');
+                        }
+                      } catch {
+                        alert('Gagal menyimpan favorit');
+                      }
+                    }}
                   >
                     <Heart className={`h-5 w-5 ${isFavorite ? "fill-current" : ""}`} />
                   </Button>
-                  <Button variant="outline" size="icon">
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    onClick={() => {
+                      if (navigator.share) {
+                        navigator.share({
+                          title: place?.name || 'Wander East',
+                          text: `Yuk kunjungi ${place?.name} di Wander East!`,
+                          url: window.location.href,
+                        }).catch(() => {});
+                      } else {
+                        navigator.clipboard.writeText(window.location.href);
+                        alert('Link berhasil disalin!');
+                      }
+                    }}
+                  >
                     <Share2 className="h-5 w-5" />
                   </Button>
                   <Button
                     variant={isVisited ? "default" : "outline"}
                     onClick={handleCheckin}
                     className="gap-2"
-                    disabled={isVisited}
+                    disabled={isVisited || isCheckingIn}
                   >
-                    <CheckCircle className={`h-4 w-4 ${isVisited ? "fill-current" : ""}`} />
-                    {isVisited ? "Visited ✓" : "Check In (+50 XP)"}
+                    {isCheckingIn ? (
+                      <><Loader2 className="h-4 w-4 animate-spin" /><LocateFixed className="h-4 w-4" /> Mencari lokasi...</>
+                    ) : isVisited ? (
+                      <><CheckCircle className="h-4 w-4 fill-current" /> Visited ✓</>
+                    ) : (
+                      <><CheckCircle className="h-4 w-4" /> Check In (+50 XP)</>
+                    )}
                   </Button>
                 </div>
               </div>
@@ -371,16 +484,66 @@ export default function DestinationDetailPage({
               )}
             </div>
 
-            {/* Reviews */}
+            {/* Video Embed */}
+            {place.videoUrl && (
+              <div className="bg-card rounded-2xl p-6 border border-border">
+                <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
+                  <Play className="h-5 w-5 text-primary" />
+                  Video
+                </h2>
+                {place.videoUrl.includes('youtube.com') || place.videoUrl.includes('youtu.be') ? (
+                  <div className="aspect-video rounded-xl overflow-hidden">
+                    <iframe
+                      src={`https://www.youtube.com/embed/${place.videoUrl.match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/|v\/))([^?&]+)/)?.[1] || ''}`}
+                      className="w-full h-full"
+                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                      allowFullScreen
+                      title={`Video ${place.name}`}
+                    />
+                  </div>
+                ) : place.videoUrl.includes('tiktok.com') ? (
+                  <div className="flex flex-col items-center gap-3">
+                    <a
+                      href={place.videoUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-2 bg-secondary rounded-xl p-4 hover:bg-secondary/80 transition-colors w-full"
+                    >
+                      <div className="w-10 h-10 rounded-full bg-black flex items-center justify-center">
+                        <span className="text-white text-lg">♪</span>
+                      </div>
+                      <div className="flex-1">
+                        <p className="font-medium text-sm">Watch on TikTok</p>
+                        <p className="text-xs text-muted-foreground truncate">{place.videoUrl}</p>
+                      </div>
+                      <ExternalLink className="h-4 w-4 text-muted-foreground" />
+                    </a>
+                  </div>
+                ) : (
+                  <a
+                    href={place.videoUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-2 text-primary hover:underline"
+                  >
+                    <ExternalLink className="h-4 w-4" />
+                    Watch Video
+                  </a>
+                )}
+              </div>
+            )}
+
+            {/* Reviews (Merged Google + Explorer) */}
             <div className="bg-card rounded-2xl p-6 border border-border">
               <div className="flex items-center justify-between mb-6">
-                <h2 className="text-xl font-semibold">Explorer Reviews</h2>
+                <h2 className="text-xl font-semibold">Reviews</h2>
+                <span className="text-sm text-muted-foreground">{allReviews.length} reviews</span>
               </div>
 
               {/* Review List */}
               <div className="space-y-6">
-                {place.reviews && place.reviews.length > 0 ? (
-                  place.reviews.map((review) => (
+                {allReviews.length > 0 ? (
+                  allReviews.map((review) => (
                     <div key={review.id} className="border-b border-border pb-6 last:border-0">
                       <div className="flex items-start gap-3">
                         <img
@@ -389,11 +552,18 @@ export default function DestinationDetailPage({
                           className="w-10 h-10 rounded-full object-cover"
                         />
                         <div className="flex-1">
-                          <div className="flex items-center gap-2 mb-1">
+                          <div className="flex items-center gap-2 mb-1 flex-wrap">
                             <span className="font-medium">{review.userName}</span>
-                            <Badge variant="outline" className="text-xs">
-                              Lv. {review.userLevel}
-                            </Badge>
+                            {review.source === 'google' ? (
+                              <Badge className="bg-blue-500/20 text-blue-400 text-[10px] px-1.5 py-0">Google</Badge>
+                            ) : (
+                              <Badge className="bg-primary/20 text-primary text-[10px] px-1.5 py-0">Explorer</Badge>
+                            )}
+                            {review.source !== 'google' && review.userLevel > 0 && (
+                              <Badge variant="outline" className="text-xs">
+                                Lv. {review.userLevel}
+                              </Badge>
+                            )}
                           </div>
                           <div className="flex items-center gap-2 mb-2">
                             <div className="flex">
@@ -409,10 +579,22 @@ export default function DestinationDetailPage({
                               ))}
                             </div>
                             <span className="text-xs text-muted-foreground">
-                              {new Date(review.createdAt).toLocaleDateString("id-ID")}
+                              {review.relativeTime || new Date(review.createdAt).toLocaleDateString("id-ID")}
                             </span>
                           </div>
                           <p className="text-sm text-muted-foreground">{review.comment}</p>
+                          {review.photos && review.photos.length > 0 && (
+                            <div className="flex gap-2 mt-2 flex-wrap">
+                              {review.photos.map((photo, i) => (
+                                <img
+                                  key={i}
+                                  src={photo}
+                                  alt={`Review photo ${i + 1}`}
+                                  className="w-20 h-20 rounded-lg object-cover border border-border"
+                                />
+                              ))}
+                            </div>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -424,56 +606,63 @@ export default function DestinationDetailPage({
                 )}
               </div>
 
-              {/* Write Review */}
+              {/* Write Review — Only if checked in */}
               <div className="mt-6 pt-6 border-t border-border">
-                <h3 className="font-semibold mb-4">Write a Review</h3>
-                <form onSubmit={handleSubmitReview}>
-                  <div className="mb-4">
-                    <label className="block text-sm text-muted-foreground mb-2">
-                      Your Rating
-                    </label>
-                    <div className="flex gap-1">
-                      {[1, 2, 3, 4, 5].map((star) => (
-                        <button
-                          key={star}
-                          type="button"
-                          onClick={() => setNewRating(star)}
-                          onMouseEnter={() => setHoverRating(star)}
-                          onMouseLeave={() => setHoverRating(0)}
-                        >
-                          <Star
-                            className={`h-6 w-6 cursor-pointer transition-colors ${
-                              star <= (hoverRating || newRating)
-                                ? "text-yellow-400 fill-yellow-400"
-                                : "text-muted"
-                            }`}
-                          />
-                        </button>
-                      ))}
-                    </div>
+                {isVisited ? (
+                  <>
+                    <h3 className="font-semibold mb-4">Write a Review</h3>
+                    <form onSubmit={handleSubmitReview}>
+                      <div className="mb-4">
+                        <label className="block text-sm text-muted-foreground mb-2">
+                          Your Rating
+                        </label>
+                        <div className="flex gap-1">
+                          {[1, 2, 3, 4, 5].map((star) => (
+                            <button
+                              key={star}
+                              type="button"
+                              onClick={() => setNewRating(star)}
+                              onMouseEnter={() => setHoverRating(star)}
+                              onMouseLeave={() => setHoverRating(0)}
+                            >
+                              <Star
+                                className={`h-6 w-6 cursor-pointer transition-colors ${
+                                  star <= (hoverRating || newRating)
+                                    ? "text-yellow-400 fill-yellow-400"
+                                    : "text-muted"
+                                }`}
+                              />
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                      <Textarea
+                        placeholder="Share your experience..."
+                        value={newReview}
+                        onChange={(e) => setNewReview(e.target.value)}
+                        className="mb-4"
+                        rows={4}
+                      />
+                      <div className="flex items-center gap-2">
+                        <Button type="submit" size="sm" disabled={isSubmitting}>
+                          {isSubmitting ? (
+                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                          ) : (
+                            <Send className="h-4 w-4 mr-2" />
+                          )}
+                          Submit Review
+                        </Button>
+                      </div>
+                    </form>
+                  </>
+                ) : (
+                  <div className="text-center py-4">
+                    <CheckCircle className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
+                    <p className="text-sm text-muted-foreground">
+                      Kamu harus <strong>Check In</strong> terlebih dahulu untuk menulis review.
+                    </p>
                   </div>
-                  <Textarea
-                    placeholder="Share your experience..."
-                    value={newReview}
-                    onChange={(e) => setNewReview(e.target.value)}
-                    className="mb-4"
-                    rows={4}
-                  />
-                  <div className="flex items-center gap-2">
-                    <Button type="button" variant="outline" size="sm">
-                      <Camera className="h-4 w-4 mr-2" />
-                      Add Photos
-                    </Button>
-                    <Button type="submit" size="sm" disabled={isSubmitting}>
-                      {isSubmitting ? (
-                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                      ) : (
-                        <Send className="h-4 w-4 mr-2" />
-                      )}
-                      Submit Review
-                    </Button>
-                  </div>
-                </form>
+                )}
               </div>
             </div>
           </div>
@@ -483,14 +672,25 @@ export default function DestinationDetailPage({
             {/* Location & Map */}
             <div className="bg-card rounded-2xl p-6 border border-border">
               <h3 className="font-semibold mb-4">Location</h3>
-              {/* Map Placeholder */}
+              {/* Embedded Google Map */}
               <div className="aspect-square bg-secondary rounded-xl overflow-hidden mb-4 relative">
-                <div className="w-full h-full flex items-center justify-center bg-secondary">
-                  <div className="bg-background/80 backdrop-blur-sm rounded-lg p-4 text-center">
-                    <MapPin className="h-8 w-8 text-primary mx-auto mb-2" />
-                    <p className="text-sm font-medium">View on Map</p>
+                {place.coordinates ? (
+                  <iframe
+                    src={`https://www.google.com/maps/embed/v1/place?key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || ''}&q=${place.coordinates.lat},${place.coordinates.lng}&zoom=15&maptype=roadmap`}
+                    className="w-full h-full border-0"
+                    allowFullScreen
+                    loading="lazy"
+                    referrerPolicy="no-referrer-when-downgrade"
+                    title={`Map ${place.name}`}
+                  />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center bg-secondary">
+                    <div className="bg-background/80 backdrop-blur-sm rounded-lg p-4 text-center">
+                      <MapPin className="h-8 w-8 text-primary mx-auto mb-2" />
+                      <p className="text-sm font-medium">Koordinat belum tersedia</p>
+                    </div>
                   </div>
-                </div>
+                )}
               </div>
               <p className="text-sm text-muted-foreground mb-4">{place.address}</p>
               <Button className="w-full" asChild>
@@ -506,6 +706,47 @@ export default function DestinationDetailPage({
                 </a>
               </Button>
             </div>
+
+            {/* Social Media Links */}
+            {(place.instagramUrl || place.tiktokUrl || place.facebookUrl || place.websiteUrl) && (
+              <div className="bg-card rounded-2xl p-6 border border-border">
+                <h3 className="font-semibold mb-4">Social Media</h3>
+                <div className="space-y-3">
+                  {place.instagramUrl && (
+                    <a href={place.instagramUrl} target="_blank" rel="noopener noreferrer"
+                      className="flex items-center gap-3 p-3 rounded-lg bg-secondary hover:bg-secondary/80 transition-colors">
+                      <Instagram className="h-5 w-5 text-pink-400" />
+                      <span className="text-sm font-medium">Instagram</span>
+                      <ExternalLink className="h-3 w-3 ml-auto text-muted-foreground" />
+                    </a>
+                  )}
+                  {place.tiktokUrl && (
+                    <a href={place.tiktokUrl} target="_blank" rel="noopener noreferrer"
+                      className="flex items-center gap-3 p-3 rounded-lg bg-secondary hover:bg-secondary/80 transition-colors">
+                      <span className="text-lg">♪</span>
+                      <span className="text-sm font-medium">TikTok</span>
+                      <ExternalLink className="h-3 w-3 ml-auto text-muted-foreground" />
+                    </a>
+                  )}
+                  {place.facebookUrl && (
+                    <a href={place.facebookUrl} target="_blank" rel="noopener noreferrer"
+                      className="flex items-center gap-3 p-3 rounded-lg bg-secondary hover:bg-secondary/80 transition-colors">
+                      <Facebook className="h-5 w-5 text-blue-500" />
+                      <span className="text-sm font-medium">Facebook</span>
+                      <ExternalLink className="h-3 w-3 ml-auto text-muted-foreground" />
+                    </a>
+                  )}
+                  {place.websiteUrl && (
+                    <a href={place.websiteUrl} target="_blank" rel="noopener noreferrer"
+                      className="flex items-center gap-3 p-3 rounded-lg bg-secondary hover:bg-secondary/80 transition-colors">
+                      <Globe className="h-5 w-5 text-primary" />
+                      <span className="text-sm font-medium">Website</span>
+                      <ExternalLink className="h-3 w-3 ml-auto text-muted-foreground" />
+                    </a>
+                  )}
+                </div>
+              </div>
+            )}
 
             {/* Nearby Hidden Gems */}
             {relatedPlaces.length > 0 && (

@@ -103,7 +103,7 @@ export default function ExplorePage() {
 
   return (
     <main className="min-h-screen bg-background">
-      <Navbar isLoggedIn={true} />
+      <Navbar />
 
       {/* Hero Section */}
       <section className="pt-24 pb-8 bg-gradient-to-b from-card to-background">

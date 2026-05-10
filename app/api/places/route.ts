@@ -79,6 +79,11 @@ export async function GET(request: NextRequest) {
           difficulty: p.DIFFICULTY,
           isMustVisit: p.IS_MUST_VISIT === 1,
           googlePlaceId: p.GOOGLE_PLACE_ID,
+          videoUrl: p.VIDEO_URL,
+          instagramUrl: p.INSTAGRAM_URL,
+          tiktokUrl: p.TIKTOK_URL,
+          facebookUrl: p.FACEBOOK_URL,
+          websiteUrl: p.WEBSITE_URL,
           tags: tags.map((t: Record<string, unknown>) => t.TAG_NAME),
         };
       })
@@ -103,18 +108,21 @@ export async function POST(request: Request) {
     const {
       name, slug, description, longDescription, category, cityId,
       imageUrl, address, latitude, longitude, operationalHours,
-      priceRange, estimatedDuration, difficulty, isMustVisit, tags
+      priceRange, estimatedDuration, difficulty, isMustVisit, tags,
+      videoUrl, instagramUrl, tiktokUrl, facebookUrl, websiteUrl
     } = body;
 
     const result = await execute(
       `INSERT INTO places (
         name, slug, description, long_description, category, city_id,
         image_url, address, latitude, longitude, operational_hours,
-        price_range, estimated_duration, difficulty, is_must_visit, status
+        price_range, estimated_duration, difficulty, is_must_visit,
+        video_url, instagram_url, tiktok_url, facebook_url, website_url, status
       ) VALUES (
         :name, :slug, :description, :long_description, :category, :city_id,
         :image_url, :address, :latitude, :longitude, :operational_hours,
-        :price_range, :estimated_duration, :difficulty, :is_must_visit, 'active'
+        :price_range, :estimated_duration, :difficulty, :is_must_visit,
+        :video_url, :instagram_url, :tiktok_url, :facebook_url, :website_url, 'active'
       ) RETURNING id INTO :id`,
       {
         name,
@@ -132,6 +140,11 @@ export async function POST(request: Request) {
         estimated_duration: estimatedDuration || null,
         difficulty: difficulty || null,
         is_must_visit: isMustVisit ? 1 : 0,
+        video_url: videoUrl || null,
+        instagram_url: instagramUrl || null,
+        tiktok_url: tiktokUrl || null,
+        facebook_url: facebookUrl || null,
+        website_url: websiteUrl || null,
         id: { dir: oracledb.BIND_OUT, type: oracledb.NUMBER },
       }
     );

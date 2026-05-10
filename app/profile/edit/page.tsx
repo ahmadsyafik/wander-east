@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Navbar } from "@/components/layout/navbar";
@@ -19,13 +19,16 @@ import {
   Eye,
   EyeOff,
   Loader2,
+  Camera,
 } from "lucide-react";
 
 const serifFont = { fontFamily: "'DM Serif Display', Georgia, serif" };
 
 export default function EditProfilePage() {
   const router = useRouter();
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [showPassword, setShowPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
@@ -65,10 +68,46 @@ export default function EditProfilePage() {
   ) => {
     const { name, value } = e.target;
     setFormData({ ...formData, [name]: value });
-    // Clear error when user starts typing
     if (errors[name]) {
       setErrors({ ...errors, [name]: "" });
     }
+  };
+
+  const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validate client-side
+    const allowedTypes = ["image/jpeg", "image/png", "image/webp", "image/gif"];
+    if (!allowedTypes.includes(file.type)) {
+      alert("Format file tidak didukung. Gunakan JPG, PNG, WebP, atau GIF.");
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      alert("Ukuran file terlalu besar. Maksimal 5MB.");
+      return;
+    }
+
+    setIsUploading(true);
+    try {
+      const fd = new FormData();
+      fd.append("avatar", file);
+
+      const res = await fetch("/api/auth/upload-avatar", {
+        method: "POST",
+        body: fd,
+      });
+      const data = await res.json();
+
+      if (res.ok) {
+        setFormData((prev) => ({ ...prev, avatar: data.avatarUrl }));
+      } else {
+        alert(data.error || "Gagal upload foto");
+      }
+    } catch {
+      alert("Gagal upload foto. Coba lagi.");
+    }
+    setIsUploading(false);
   };
 
   const validateForm = () => {
@@ -86,7 +125,8 @@ export default function EditProfilePage() {
 
     if (formData.newPassword) {
       if (!formData.currentPassword) {
-        newErrors.currentPassword = "Current password is required to change password";
+        newErrors.currentPassword =
+          "Current password is required to change password";
       }
       if (formData.newPassword.length < 8) {
         newErrors.newPassword = "Password must be at least 8 characters";
@@ -104,16 +144,39 @@ export default function EditProfilePage() {
     if (!validateForm()) return;
 
     setIsSaving(true);
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 1000));
+    try {
+      const body: Record<string, string> = {
+        name: formData.name,
+        email: formData.email,
+      };
+
+      if (formData.newPassword && formData.currentPassword) {
+        body.currentPassword = formData.currentPassword;
+        body.newPassword = formData.newPassword;
+      }
+
+      const res = await fetch("/api/auth/update-profile", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      const data = await res.json();
+
+      if (res.ok) {
+        alert("Profil berhasil diperbarui!");
+        router.push("/profile");
+      } else {
+        alert(data.error || "Gagal memperbarui profil");
+      }
+    } catch {
+      alert("Terjadi kesalahan. Coba lagi.");
+    }
     setIsSaving(false);
-    alert("Profile updated successfully! (This is a demo - backend integration needed)");
-    router.push("/profile");
   };
 
   return (
     <main className="min-h-screen bg-background">
-      <Navbar isLoggedIn={true} />
+      <Navbar />
 
       <section className="pt-24 pb-8">
         <div className="container mx-auto px-4">
@@ -129,7 +192,9 @@ export default function EditProfilePage() {
                 <h1 className="text-2xl font-bold" style={serifFont}>
                   Edit Profile
                 </h1>
-                <p className="text-muted-foreground">Update your profile information</p>
+                <p className="text-muted-foreground">
+                  Update your profile information
+                </p>
               </div>
             </div>
             <div className="flex gap-3">
@@ -157,25 +222,61 @@ export default function EditProfilePage() {
             <div className="bg-card rounded-xl border border-border p-6">
               <h2 className="font-semibold mb-4">Profile Picture</h2>
               <div className="flex items-center gap-6">
-                <div className="relative">
-                  <img
-                    src={formData.avatar}
-                    alt={formData.name}
-                    className="w-24 h-24 rounded-full object-cover border-4 border-primary"
+                <div className="relative group">
+                  {formData.avatar ? (
+                    <img
+                      src={formData.avatar}
+                      alt={formData.name}
+                      className="w-24 h-24 rounded-full object-cover border-4 border-primary"
+                    />
+                  ) : (
+                    <div className="w-24 h-24 rounded-full border-4 border-primary bg-gradient-to-br from-primary/80 to-teal-500 flex items-center justify-center">
+                      <span className="text-2xl font-bold text-white">
+                        {formData.name?.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase() || '?'}
+                      </span>
+                    </div>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={isUploading}
+                    className="absolute inset-0 rounded-full bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
+                  >
+                    {isUploading ? (
+                      <Loader2 className="h-6 w-6 text-white animate-spin" />
+                    ) : (
+                      <Camera className="h-6 w-6 text-white" />
+                    )}
+                  </button>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp,image/gif"
+                    className="hidden"
+                    onChange={handleAvatarUpload}
                   />
                 </div>
                 <div className="flex-1">
-                  <div className="mb-3">
-                    <label className="text-sm font-medium mb-2 block">Avatar URL</label>
-                    <Input
-                      name="avatar"
-                      value={formData.avatar}
-                      onChange={handleChange}
-                      placeholder="https://example.com/avatar.jpg"
-                    />
-                  </div>
-                  <p className="text-xs text-muted-foreground">
-                    Enter a URL to your profile picture. Recommended size: 200x200px.
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={isUploading}
+                  >
+                    {isUploading ? (
+                      <>
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        Uploading...
+                      </>
+                    ) : (
+                      <>
+                        <Upload className="h-4 w-4 mr-2" />
+                        Upload Photo
+                      </>
+                    )}
+                  </Button>
+                  <p className="text-xs text-muted-foreground mt-2">
+                    JPG, PNG, WebP atau GIF. Maksimal 5MB.
                   </p>
                 </div>
               </div>
@@ -197,7 +298,9 @@ export default function EditProfilePage() {
                     placeholder="Enter your name"
                   />
                   {errors.name && (
-                    <p className="text-sm text-destructive mt-1">{errors.name}</p>
+                    <p className="text-sm text-destructive mt-1">
+                      {errors.name}
+                    </p>
                   )}
                 </div>
 
@@ -214,7 +317,9 @@ export default function EditProfilePage() {
                     placeholder="Enter your email"
                   />
                   {errors.email && (
-                    <p className="text-sm text-destructive mt-1">{errors.email}</p>
+                    <p className="text-sm text-destructive mt-1">
+                      {errors.email}
+                    </p>
                   )}
                 </div>
 
@@ -241,7 +346,8 @@ export default function EditProfilePage() {
                 Change Password
               </h2>
               <p className="text-sm text-muted-foreground mb-4">
-                Leave these fields empty if you do not want to change your password.
+                Leave these fields empty if you do not want to change your
+                password.
               </p>
               <div className="space-y-4">
                 <div>
@@ -276,7 +382,9 @@ export default function EditProfilePage() {
                 </div>
 
                 <div>
-                  <label className="text-sm font-medium mb-2 block">New Password</label>
+                  <label className="text-sm font-medium mb-2 block">
+                    New Password
+                  </label>
                   <div className="relative">
                     <Input
                       name="newPassword"
@@ -298,7 +406,9 @@ export default function EditProfilePage() {
                     </button>
                   </div>
                   {errors.newPassword && (
-                    <p className="text-sm text-destructive mt-1">{errors.newPassword}</p>
+                    <p className="text-sm text-destructive mt-1">
+                      {errors.newPassword}
+                    </p>
                   )}
                 </div>
 
@@ -324,9 +434,12 @@ export default function EditProfilePage() {
 
             {/* Danger Zone */}
             <div className="bg-card rounded-xl border border-destructive/50 p-6">
-              <h2 className="font-semibold mb-4 text-destructive">Danger Zone</h2>
+              <h2 className="font-semibold mb-4 text-destructive">
+                Danger Zone
+              </h2>
               <p className="text-sm text-muted-foreground mb-4">
-                Once you delete your account, there is no going back. Please be certain.
+                Once you delete your account, there is no going back. Please be
+                certain.
               </p>
               <Button
                 variant="destructive"

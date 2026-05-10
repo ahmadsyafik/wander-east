@@ -30,6 +30,12 @@ export interface Place {
   difficulty?: string;
   isMustVisit: boolean;
   tags?: string[];
+  videoUrl?: string;
+  instagramUrl?: string;
+  tiktokUrl?: string;
+  facebookUrl?: string;
+  websiteUrl?: string;
+  googlePlaceId?: string;
 }
 
 export interface Review {
