@@ -193,9 +193,10 @@ export default function MapPage() {
       isLoaded
         ? {
             url: `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(
-              '<svg xmlns="http://www.w3.org/2000/svg" width="36" height="44" viewBox="0 0 36 44"><defs><filter id="s" x="-10%" y="-10%" width="130%" height="130%"><feDropShadow dx="0" dy="1" stdDeviation="1.5" flood-opacity="0.3"/></filter></defs><path d="M18 0C8.06 0 0 8.06 0 18c0 13.5 18 26 18 26s18-12.5 18-26C36 8.06 27.94 0 18 0z" fill="%2310b981" filter="url(%23s)"/><circle cx="18" cy="17" r="10" fill="white"/><path d="M12 22l3-5 2.5 3 3-7 3.5 9" fill="none" stroke="%2310b981" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><circle cx="22" cy="13" r="1.5" fill="%2310b981"/></svg>'
+              '<svg xmlns="http://www.w3.org/2000/svg" width="44" height="54" viewBox="0 0 44 54"><defs><filter id="s" x="-10%" y="-10%" width="130%" height="130%"><feDropShadow dx="0" dy="1.5" stdDeviation="2" flood-opacity="0.3"/></filter></defs><path d="M22 0C10.6 0 1.5 9.1 1.5 20.5c0 15.5 18 30.5 19.1 31.4.3.3.6.4.9.4.3 0 .6-.1.9-.4 1.1-.9 19.1-15.9 19.1-31.4C42.5 9.1 33.4 0 22 0z" fill="%2310b981" filter="url(%23s)"/><circle cx="22" cy="20.5" r="15" fill="white"/><text x="22" y="27" font-size="18" text-anchor="middle" font-family="Arial">⛰️</text></svg>'
             )}`,
-            scaledSize: new google.maps.Size(36, 44),
+            scaledSize: new google.maps.Size(44, 54),
+            anchor: new google.maps.Point(22, 54),
           }
         : undefined,
     [isLoaded]
@@ -206,9 +207,10 @@ export default function MapPage() {
       isLoaded
         ? {
             url: `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(
-              '<svg xmlns="http://www.w3.org/2000/svg" width="36" height="44" viewBox="0 0 36 44"><defs><filter id="s" x="-10%" y="-10%" width="130%" height="130%"><feDropShadow dx="0" dy="1" stdDeviation="1.5" flood-opacity="0.3"/></filter></defs><path d="M18 0C8.06 0 0 8.06 0 18c0 13.5 18 26 18 26s18-12.5 18-26C36 8.06 27.94 0 18 0z" fill="%23f59e0b" filter="url(%23s)"/><circle cx="18" cy="17" r="10" fill="white"/><path d="M13 12v5c0 1.66 1.34 3 3 3h.5v4h3v-4h.5c1.66 0 3-1.34 3-3v-5h-2v4c0 .55-.45 1-1 1h-1v-5h-2v5h-1c-.55 0-1-.45-1-1v-4z" fill="%23f59e0b"/><path d="M24 12v4c0 1.1-.9 2-2 2v6h-1v-6c-1.1 0-2-.9-2-2v-4" fill="none" stroke="%23f59e0b" stroke-width="0" /></svg>'
+              '<svg xmlns="http://www.w3.org/2000/svg" width="44" height="54" viewBox="0 0 44 54"><defs><filter id="s" x="-10%" y="-10%" width="130%" height="130%"><feDropShadow dx="0" dy="1.5" stdDeviation="2" flood-opacity="0.3"/></filter></defs><path d="M22 0C10.6 0 1.5 9.1 1.5 20.5c0 15.5 18 30.5 19.1 31.4.3.3.6.4.9.4.3 0 .6-.1.9-.4 1.1-.9 19.1-15.9 19.1-31.4C42.5 9.1 33.4 0 22 0z" fill="%23f59e0b" filter="url(%23s)"/><circle cx="22" cy="20.5" r="15" fill="white"/><text x="22" y="27" font-size="18" text-anchor="middle" font-family="Arial">🍜</text></svg>'
             )}`,
-            scaledSize: new google.maps.Size(36, 44),
+            scaledSize: new google.maps.Size(44, 54),
+            anchor: new google.maps.Point(22, 54),
           }
         : undefined,
     [isLoaded]
@@ -323,7 +325,7 @@ export default function MapPage() {
                         variant="outline"
                         className="text-[10px] px-1.5 py-0"
                       >
-                        {place.category === "kuliner" ? "🍽" : "⛰️"}
+                        {place.category === "kuliner" ? "🍜" : "⛰️"}
                       </Badge>
                     </div>
                   </div>

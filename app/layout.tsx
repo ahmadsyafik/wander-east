@@ -27,7 +27,10 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="id" className="bg-background">
-      <body className={`${inter.variable} ${dmSerif.variable} font-sans antialiased`}>
+      <body 
+        className={`${inter.variable} ${dmSerif.variable} font-sans antialiased`}
+        suppressHydrationWarning
+      >
         {children}
         {process.env.NODE_ENV === 'production' && <Analytics />}
       </body>

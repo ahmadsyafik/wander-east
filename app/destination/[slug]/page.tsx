@@ -320,12 +320,6 @@ export default function DestinationDetailPage({
             </>
           )}
 
-          {/* Must Visit Badge */}
-          {place.isMustVisit && (
-            <Badge className="absolute top-20 left-4 bg-primary text-primary-foreground">
-              Must Visit
-            </Badge>
-          )}
         </div>
       </section>
 
@@ -338,6 +332,11 @@ export default function DestinationDetailPage({
             <div className="bg-card rounded-2xl p-6 border border-border">
               <div className="flex flex-wrap items-start justify-between gap-4 mb-4">
                 <div>
+                  {place.isMustVisit && (
+                    <Badge className="mb-3 bg-primary text-primary-foreground uppercase tracking-wider text-[10px] px-2 py-0.5 border-none">
+                      Must Visit
+                    </Badge>
+                  )}
                   <h1 className="text-3xl md:text-4xl font-bold mb-2" style={serifFont}>{place.name}</h1>
                   <div className="flex items-center gap-2 text-muted-foreground">
                     <MapPin className="h-4 w-4" />
