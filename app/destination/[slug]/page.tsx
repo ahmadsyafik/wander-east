@@ -7,6 +7,7 @@ import { Footer } from "@/components/layout/footer";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   Star,
   MapPin,
@@ -31,6 +32,10 @@ import {
 } from "lucide-react";
 
 const serifFont = { fontFamily: "'DM Serif Display', Georgia, serif" };
+
+const getInitials = (name: string) => {
+  return name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
+};
 
 interface PlaceDetail {
   id: number;
@@ -545,11 +550,10 @@ export default function DestinationDetailPage({
                   allReviews.map((review) => (
                     <div key={review.id} className="border-b border-border pb-6 last:border-0">
                       <div className="flex items-start gap-3">
-                        <img
-                          src={review.userAvatar || "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100"}
-                          alt={review.userName}
-                          className="w-10 h-10 rounded-full object-cover"
-                        />
+                        <Avatar className="w-10 h-10">
+                          <AvatarImage src={review.userAvatar || ""} alt={review.userName} className="object-cover" />
+                          <AvatarFallback className="text-sm font-medium">{getInitials(review.userName)}</AvatarFallback>
+                        </Avatar>
                         <div className="flex-1">
                           <div className="flex items-center gap-2 mb-1 flex-wrap">
                             <span className="font-medium">{review.userName}</span>

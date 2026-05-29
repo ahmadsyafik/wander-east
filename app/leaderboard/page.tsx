@@ -5,9 +5,14 @@ import { Navbar } from "@/components/layout/navbar";
 import { Footer } from "@/components/layout/footer";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Trophy, Medal, TrendingUp, Users, Crown, Loader2 } from "lucide-react";
 
 const serifFont = { fontFamily: "'DM Serif Display', Georgia, serif" };
+
+const getInitials = (name: string) => {
+  return name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
+};
 
 interface LeaderboardUser {
   rank: number;
@@ -83,11 +88,10 @@ export default function LeaderboardPage() {
                 {top3[1] && (
                   <div className="flex-1 text-center">
                     <div className="mb-2">
-                      <img
-                        src={top3[1].avatar || "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100"}
-                        alt={top3[1].name}
-                        className="w-16 h-16 rounded-full mx-auto border-4 border-gray-300 object-cover"
-                      />
+                      <Avatar className="w-16 h-16 mx-auto border-4 border-gray-300">
+                        <AvatarImage src={top3[1].avatar || ""} alt={top3[1].name} className="object-cover" />
+                        <AvatarFallback className="text-xl font-medium">{getInitials(top3[1].name)}</AvatarFallback>
+                      </Avatar>
                     </div>
                     <div className="bg-card rounded-t-xl p-4 h-32 flex flex-col justify-end border border-border border-b-0">
                       <Medal className="h-6 w-6 text-gray-300 mx-auto mb-2" />
@@ -102,11 +106,10 @@ export default function LeaderboardPage() {
                   <div className="flex-1 text-center">
                     <div className="mb-2">
                       <div className="relative inline-block">
-                        <img
-                          src={top3[0].avatar || "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100"}
-                          alt={top3[0].name}
-                          className="w-20 h-20 rounded-full mx-auto border-4 border-yellow-400 object-cover"
-                        />
+                        <Avatar className="w-20 h-20 mx-auto border-4 border-yellow-400">
+                          <AvatarImage src={top3[0].avatar || ""} alt={top3[0].name} className="object-cover" />
+                          <AvatarFallback className="text-2xl font-medium">{getInitials(top3[0].name)}</AvatarFallback>
+                        </Avatar>
                         <Crown className="absolute -top-4 left-1/2 -translate-x-1/2 h-8 w-8 text-yellow-400" />
                       </div>
                     </div>
@@ -122,11 +125,10 @@ export default function LeaderboardPage() {
                 {top3[2] && (
                   <div className="flex-1 text-center">
                     <div className="mb-2">
-                      <img
-                        src={top3[2].avatar || "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100"}
-                        alt={top3[2].name}
-                        className="w-16 h-16 rounded-full mx-auto border-4 border-amber-600 object-cover"
-                      />
+                      <Avatar className="w-16 h-16 mx-auto border-4 border-amber-600">
+                        <AvatarImage src={top3[2].avatar || ""} alt={top3[2].name} className="object-cover" />
+                        <AvatarFallback className="text-xl font-medium">{getInitials(top3[2].name)}</AvatarFallback>
+                      </Avatar>
                     </div>
                     <div className="bg-card rounded-t-xl p-4 h-24 flex flex-col justify-end border border-border border-b-0">
                       <Medal className="h-6 w-6 text-amber-600 mx-auto mb-2" />
@@ -158,11 +160,10 @@ export default function LeaderboardPage() {
                       <div className="w-10 flex items-center justify-center">
                         {getRankIcon(user.rank)}
                       </div>
-                      <img
-                        src={user.avatar || "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100"}
-                        alt={user.name}
-                        className="w-10 h-10 rounded-full object-cover"
-                      />
+                      <Avatar className="w-10 h-10">
+                        <AvatarImage src={user.avatar || ""} alt={user.name} className="object-cover" />
+                        <AvatarFallback className="text-sm font-medium">{getInitials(user.name)}</AvatarFallback>
+                      </Avatar>
                       <div className="flex-1 min-w-0">
                         <p className="font-medium truncate">{user.name}</p>
                         <p className="text-xs text-muted-foreground">

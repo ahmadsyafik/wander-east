@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -26,6 +27,10 @@ import {
 } from "lucide-react";
 
 const serifFont = { fontFamily: "'DM Serif Display', Georgia, serif" };
+
+const getInitials = (name: string) => {
+  return name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
+};
 
 interface UserData {
   id: number;
@@ -211,11 +216,10 @@ export default function AdminUsersPage() {
                   <tr key={user.id} className="hover:bg-secondary/30">
                     <td className="p-4">
                       <div className="flex items-center gap-3">
-                        <img
-                          src={user.avatar || "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100"}
-                          alt={user.name}
-                          className="w-10 h-10 rounded-full object-cover"
-                        />
+                        <Avatar className="w-10 h-10">
+                          <AvatarImage src={user.avatar || ""} alt={user.name} className="object-cover" />
+                          <AvatarFallback className="text-sm font-medium">{getInitials(user.name)}</AvatarFallback>
+                        </Avatar>
                         <div>
                           <p className="font-medium">{user.name}</p>
                           <p className="text-sm text-muted-foreground">{user.email}</p>

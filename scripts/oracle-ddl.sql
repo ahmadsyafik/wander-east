@@ -189,7 +189,8 @@ CREATE TABLE achievements (
     description CLOB,
     icon VARCHAR2(10),
     requirement NUMBER NOT NULL,
-    type VARCHAR2(30) CHECK (type IN ('visits', 'reviews', 'photos', 'cities'))
+    type VARCHAR2(30) CHECK (type IN ('visits', 'reviews', 'photos', 'cities')),
+    category VARCHAR2(20) DEFAULT 'Tourism' CHECK (category IN ('Tourism', 'Culinary'))
 );
 
 -- ============================================================

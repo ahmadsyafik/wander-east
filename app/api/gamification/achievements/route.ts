@@ -12,7 +12,7 @@ export async function GET() {
 
     // Get all achievements with user progress
     const achievements = await query(
-      `SELECT a.id, a.name, a.description, a.icon, a.requirement, a.type,
+      `SELECT a.id, a.name, a.description, a.icon, a.requirement, a.type, a.category,
               NVL(ua.current_progress, 0) AS current_progress,
               NVL(ua.is_unlocked, 0) AS is_unlocked,
               ua.unlocked_at
@@ -30,6 +30,7 @@ export async function GET() {
         icon: a.ICON,
         requirement: a.REQUIREMENT,
         type: a.TYPE,
+        category: a.CATEGORY,
         current: a.CURRENT_PROGRESS,
         isUnlocked: a.IS_UNLOCKED === 1,
         unlockedAt: a.UNLOCKED_AT,

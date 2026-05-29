@@ -211,44 +211,50 @@ CREATE OR REPLACE PROCEDURE sp_update_achievement_progress(
     p_user_id NUMBER,
     p_achievement_type VARCHAR2
 ) AS
-    v_progress NUMBER;
 BEGIN
-    -- Calculate current progress based on type
-    IF p_achievement_type = 'visits' THEN
-        SELECT COUNT(*) INTO v_progress
-        FROM user_visits WHERE user_id = p_user_id;
-    ELSIF p_achievement_type = 'reviews' THEN
-        SELECT COUNT(*) INTO v_progress
-        FROM reviews WHERE user_id = p_user_id;
-    ELSIF p_achievement_type = 'cities' THEN
-        SELECT COUNT(DISTINCT p.city_id) INTO v_progress
-        FROM user_visits uv
-        JOIN places p ON uv.place_id = p.id
-        WHERE uv.user_id = p_user_id;
-    END IF;
-
     -- Update or insert user_achievements for matching achievements
     MERGE INTO user_achievements ua
     USING (
-        SELECT id AS achievement_id, requirement
-        FROM achievements
-        WHERE type = p_achievement_type
+        SELECT a.id AS achievement_id, a.requirement,
+               (CASE 
+                  WHEN a.type = 'visits' THEN
+                    (SELECT COUNT(*) FROM user_visits uv 
+                     JOIN places p ON uv.place_id = p.id 
+                     WHERE uv.user_id = p_user_id 
+                       AND ( (a.category = 'Culinary' AND p.category = 'kuliner') OR 
+                             (a.category = 'Tourism' AND p.category = 'wisata') ) )
+                  WHEN a.type = 'reviews' THEN
+                    (SELECT COUNT(*) FROM reviews r 
+                     JOIN places p ON r.place_id = p.id 
+                     WHERE r.user_id = p_user_id 
+                       AND ( (a.category = 'Culinary' AND p.category = 'kuliner') OR 
+                             (a.category = 'Tourism' AND p.category = 'wisata') ) )
+                  WHEN a.type = 'cities' THEN
+                    (SELECT COUNT(DISTINCT p.city_id) FROM user_visits uv 
+                     JOIN places p ON uv.place_id = p.id 
+                     WHERE uv.user_id = p_user_id
+                       AND ( (a.category = 'Culinary' AND p.category = 'kuliner') OR 
+                             (a.category = 'Tourism' AND p.category = 'wisata') ) )
+                  ELSE 0
+                END) AS calculated_progress
+        FROM achievements a
+        WHERE a.type = p_achievement_type
     ) a
     ON (ua.user_id = p_user_id AND ua.achievement_id = a.achievement_id)
     WHEN MATCHED THEN
         UPDATE SET
-            current_progress = v_progress,
-            is_unlocked = CASE WHEN v_progress >= a.requirement THEN 1 ELSE 0 END,
+            current_progress = a.calculated_progress,
+            is_unlocked = CASE WHEN a.calculated_progress >= a.requirement THEN 1 ELSE 0 END,
             unlocked_at = CASE
-                WHEN v_progress >= a.requirement AND ua.is_unlocked = 0 THEN CURRENT_TIMESTAMP
+                WHEN a.calculated_progress >= a.requirement AND ua.is_unlocked = 0 THEN CURRENT_TIMESTAMP
                 ELSE ua.unlocked_at
             END
     WHEN NOT MATCHED THEN
         INSERT (user_id, achievement_id, current_progress, is_unlocked, unlocked_at)
         VALUES (
-            p_user_id, a.achievement_id, v_progress,
-            CASE WHEN v_progress >= a.requirement THEN 1 ELSE 0 END,
-            CASE WHEN v_progress >= a.requirement THEN CURRENT_TIMESTAMP ELSE NULL END
+            p_user_id, a.achievement_id, a.calculated_progress,
+            CASE WHEN a.calculated_progress >= a.requirement THEN 1 ELSE 0 END,
+            CASE WHEN a.calculated_progress >= a.requirement THEN CURRENT_TIMESTAMP ELSE NULL END
         );
 END;
 /

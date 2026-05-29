@@ -78,12 +78,17 @@ INSERT INTO badges (name, description, icon) VALUES ('Cascade Seeker', 'Found 3 
 -- ============================================================
 -- SEED ACHIEVEMENTS
 -- ============================================================
-INSERT INTO achievements (name, description, icon, requirement, type) VALUES ('First Steps', 'Visit your first destination', 'STEPS', 1, 'visits');
-INSERT INTO achievements (name, description, icon, requirement, type) VALUES ('Explorer', 'Visit 10 destinations', 'MAP', 10, 'visits');
-INSERT INTO achievements (name, description, icon, requirement, type) VALUES ('Adventurer', 'Visit 25 destinations', 'SUMMIT', 25, 'visits');
-INSERT INTO achievements (name, description, icon, requirement, type) VALUES ('Reviewer', 'Write 5 reviews', 'WRITE', 5, 'reviews');
-INSERT INTO achievements (name, description, icon, requirement, type) VALUES ('Critic', 'Write 20 reviews', 'CRITIC', 20, 'reviews');
-INSERT INTO achievements (name, description, icon, requirement, type) VALUES ('City Hopper', 'Visit places in 3 different cities', 'BUS', 3, 'cities');
-INSERT INTO achievements (name, description, icon, requirement, type) VALUES ('East Java Master', 'Visit places in all 6 cities', 'TROPHY', 6, 'cities');
+INSERT INTO achievements (name, description, icon, requirement, type, category) VALUES ('First Steps', 'Visit your first destination', 'STEPS', 1, 'visits', 'Tourism');
+INSERT INTO achievements (name, description, icon, requirement, type, category) VALUES ('Explorer', 'Visit 10 destinations', 'MAP', 10, 'visits', 'Tourism');
+INSERT INTO achievements (name, description, icon, requirement, type, category) VALUES ('Adventurer', 'Visit 25 destinations', 'SUMMIT', 25, 'visits', 'Tourism');
+INSERT INTO achievements (name, description, icon, requirement, type, category) VALUES ('Reviewer', 'Write 5 reviews', 'WRITE', 5, 'reviews', 'Tourism');
+INSERT INTO achievements (name, description, icon, requirement, type, category) VALUES ('Critic', 'Write 20 reviews', 'CRITIC', 20, 'reviews', 'Tourism');
+INSERT INTO achievements (name, description, icon, requirement, type, category) VALUES ('City Hopper', 'Visit places in 3 different cities', 'BUS', 3, 'cities', 'Tourism');
+INSERT INTO achievements (name, description, icon, requirement, type, category) VALUES ('East Java Master', 'Visit places in all 6 cities', 'TROPHY', 6, 'cities', 'Tourism');
+
+-- Culinary Achievements
+INSERT INTO achievements (name, description, icon, requirement, type, category) VALUES ('Foodie Beginner', 'Visit 2 culinary spots', 'FOOD', 2, 'visits', 'Culinary');
+INSERT INTO achievements (name, description, icon, requirement, type, category) VALUES ('Culinary Expert', 'Write 5 reviews for culinary spots', 'TASTE', 5, 'reviews', 'Culinary');
+INSERT INTO achievements (name, description, icon, requirement, type, category) VALUES ('Surabaya Foodie', 'Visit 5 culinary spots in Surabaya', 'NOODLE', 5, 'visits', 'Culinary');
 
 COMMIT;
