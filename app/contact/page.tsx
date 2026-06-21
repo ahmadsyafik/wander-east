@@ -105,7 +105,7 @@ export default function ContactPage() {
               </div>
             </div>
 
-            {/* Contact Form */}
+            {/* Contact Form
             <div className="bg-card rounded-2xl p-8 border border-border">
               <h2 className="text-2xl font-bold mb-6" style={serifFont}>
                 Send a Message
@@ -182,7 +182,7 @@ export default function ContactPage() {
                   </Button>
                 </form>
               )}
-            </div>
+            </div> */}
           </div>
         </div>
       </section>

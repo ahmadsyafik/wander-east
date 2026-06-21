@@ -33,20 +33,6 @@ export function GamificationSection() {
                 Climb the leaderboard and unlock exclusive exploration perks.
               </p>
 
-              {/* Progress Bar */}
-              <div className="mb-6">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-sm font-medium">Level 12: Forest Strider</span>
-                  <span className="text-sm text-muted-foreground">2,450 / 3,000 XP</span>
-                </div>
-                <div className="h-3 bg-secondary rounded-full overflow-hidden">
-                  <div
-                    className="h-full bg-gradient-to-r from-primary to-teal-400 rounded-full"
-                    style={{ width: "82%" }}
-                  />
-                </div>
-              </div>
-
               <Button asChild className="rounded-full">
                 <Link href="/register">
                   Join the Ranks

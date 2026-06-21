@@ -65,7 +65,7 @@ export default function AboutPage() {
               <div className="w-12 h-12 mx-auto mb-4 rounded-full bg-primary/20 flex items-center justify-center">
                 <MapPin className="h-6 w-6 text-primary" />
               </div>
-              <p className="text-3xl font-bold mb-2">200+</p>
+              <p className="text-3xl font-bold mb-2">175+</p>
               <p className="text-muted-foreground">Destinations</p>
             </div>
             <div className="bg-background rounded-xl p-6 text-center border border-border">
@@ -79,14 +79,14 @@ export default function AboutPage() {
               <div className="w-12 h-12 mx-auto mb-4 rounded-full bg-primary/20 flex items-center justify-center">
                 <Star className="h-6 w-6 text-primary" />
               </div>
-              <p className="text-3xl font-bold mb-2">50K+</p>
+              <p className="text-3xl font-bold mb-2">1K+</p>
               <p className="text-muted-foreground">Reviews</p>
             </div>
             <div className="bg-background rounded-xl p-6 text-center border border-border">
               <div className="w-12 h-12 mx-auto mb-4 rounded-full bg-primary/20 flex items-center justify-center">
                 <Heart className="h-6 w-6 text-primary" />
               </div>
-              <p className="text-3xl font-bold mb-2">15</p>
+              <p className="text-3xl font-bold mb-2">39</p>
               <p className="text-muted-foreground">Cities Covered</p>
             </div>
           </div>
@@ -99,27 +99,34 @@ export default function AboutPage() {
           <h2 className="text-3xl font-bold text-center mb-12" style={serifFont}>
             Our Team
           </h2>
-          <div className="grid md:grid-cols-3 gap-8 max-w-4xl mx-auto">
+          <div className="grid md:grid-cols-4 gap-8 max-w-4xl mx-auto">
             <div className="text-center">
               <div className="w-24 h-24 mx-auto mb-4 rounded-full bg-gradient-to-br from-primary to-teal-400 flex items-center justify-center text-3xl text-primary-foreground font-bold">
-                A
+                ND
               </div>
-              <h3 className="font-semibold text-lg">Ahmad Rizky</h3>
+              <h3 className="font-semibold text-lg">Nadhia Dewi Artifasari</h3>
               <p className="text-muted-foreground text-sm">Founder & CEO</p>
             </div>
             <div className="text-center">
               <div className="w-24 h-24 mx-auto mb-4 rounded-full bg-gradient-to-br from-primary to-teal-400 flex items-center justify-center text-3xl text-primary-foreground font-bold">
-                S
+                DA
               </div>
-              <h3 className="font-semibold text-lg">Sari Dewi</h3>
+              <h3 className="font-semibold text-lg">Dini Anisa Putri</h3>
               <p className="text-muted-foreground text-sm">Head of Content</p>
             </div>
             <div className="text-center">
               <div className="w-24 h-24 mx-auto mb-4 rounded-full bg-gradient-to-br from-primary to-teal-400 flex items-center justify-center text-3xl text-primary-foreground font-bold">
-                B
+                OF
               </div>
-              <h3 className="font-semibold text-lg">Budi Santoso</h3>
+              <h3 className="font-semibold text-lg">Oktavian Febrianto</h3>
               <p className="text-muted-foreground text-sm">Lead Developer</p>
+            </div>
+            <div className="text-center">
+              <div className="w-24 h-24 mx-auto mb-4 rounded-full bg-gradient-to-br from-primary to-teal-400 flex items-center justify-center text-3xl text-primary-foreground font-bold">
+                AS
+              </div>
+              <h3 className="font-semibold text-lg">Ahmad Syafial Anam</h3>
+              <p className="text-muted-foreground text-sm">COO</p>
             </div>
           </div>
         </div>

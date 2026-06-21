@@ -430,45 +430,100 @@ export default function DestinationDetailPage({
                 </span>
               </div>
 
-              {/* Quick Info */}
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                {place.operationalHours && (
-                  <div className="bg-secondary rounded-xl p-4">
-                    <div className="flex items-center gap-2 text-muted-foreground mb-1">
-                      <Clock className="h-4 w-4" />
-                      <span className="text-xs uppercase">Hours</span>
-                    </div>
-                    <p className="font-medium text-sm">{place.operationalHours}</p>
+              {/* Quick Info — Hours & Price */}
+              {(place.operationalHours || place.priceRange || place.estimatedDuration || place.difficulty) && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {/* Operating Hours Card */}
+                  {place.operationalHours && (() => {
+                    const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+                    const dayNamesId = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
+                    const todayIndex = new Date().getDay();
+                    const todayNameEn = dayNames[todayIndex];
+                    const todayNameId = dayNamesId[todayIndex];
+
+                    const days = place.operationalHours
+                      .split('|')
+                      .map((d: string) => d.trim())
+                      .filter((d: string) => d.length > 0);
+
+                    return (
+                      <div className="bg-secondary/50 backdrop-blur-sm rounded-2xl p-5 border border-border/50">
+                        <div className="flex items-center justify-between mb-4">
+                          <div className="flex items-center gap-2.5">
+                            <div className="w-8 h-8 rounded-lg bg-primary/15 flex items-center justify-center">
+                              <Clock className="h-4 w-4 text-primary" />
+                            </div>
+                            <span className="font-semibold text-sm">Jam Operasional</span>
+                          </div>
+                        </div>
+                        <div className="space-y-1.5">
+                          {days.map((day: string, i: number) => {
+                            const isToday = day.startsWith(todayNameEn) || day.startsWith(todayNameId);
+                            return (
+                              <div
+                                key={i}
+                                className={`flex items-center justify-between py-1.5 px-3 rounded-lg text-sm transition-colors ${
+                                  isToday
+                                    ? 'bg-primary/10 border border-primary/20'
+                                    : 'hover:bg-secondary/80'
+                                }`}
+                              >
+                                <span className={`font-medium ${isToday ? 'text-primary' : 'text-muted-foreground'}`}>
+                                  {day.split(':')[0]?.trim()}
+                                </span>
+                                <span className={`text-right ${isToday ? 'text-primary font-semibold' : 'text-foreground'}`}>
+                                  {day.substring(day.indexOf(':') + 1)?.trim() || '-'}
+                                </span>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    );
+                  })()}
+
+                  {/* Price & Other Info Card */}
+                  <div className="space-y-4">
+                    {place.priceRange && (
+                      <div className="bg-secondary/50 backdrop-blur-sm rounded-2xl p-5 border border-border/50">
+                        <div className="flex items-center gap-2.5 mb-3">
+                          <div className="w-8 h-8 rounded-lg bg-emerald-500/15 flex items-center justify-center">
+                            <DollarSign className="h-4 w-4 text-emerald-400" />
+                          </div>
+                          <span className="font-semibold text-sm">Kisaran Harga</span>
+                        </div>
+                        <div className="inline-flex items-center gap-2 bg-gradient-to-r from-emerald-500/10 to-teal-500/10 border border-emerald-500/20 rounded-xl px-4 py-2.5">
+                          <span className="text-lg font-bold bg-gradient-to-r from-emerald-400 to-teal-400 bg-clip-text text-transparent">
+                            {place.priceRange}
+                          </span>
+                        </div>
+                      </div>
+                    )}
+                    {place.estimatedDuration && (
+                      <div className="bg-secondary/50 backdrop-blur-sm rounded-2xl p-5 border border-border/50">
+                        <div className="flex items-center gap-2.5 mb-3">
+                          <div className="w-8 h-8 rounded-lg bg-blue-500/15 flex items-center justify-center">
+                            <Timer className="h-4 w-4 text-blue-400" />
+                          </div>
+                          <span className="font-semibold text-sm">Estimasi Durasi</span>
+                        </div>
+                        <p className="font-medium text-foreground">{place.estimatedDuration}</p>
+                      </div>
+                    )}
+                    {place.difficulty && (
+                      <div className="bg-secondary/50 backdrop-blur-sm rounded-2xl p-5 border border-border/50">
+                        <div className="flex items-center gap-2.5 mb-3">
+                          <div className="w-8 h-8 rounded-lg bg-amber-500/15 flex items-center justify-center">
+                            <Mountain className="h-4 w-4 text-amber-400" />
+                          </div>
+                          <span className="font-semibold text-sm">Tingkat Kesulitan</span>
+                        </div>
+                        <p className="font-medium text-foreground">{place.difficulty}</p>
+                      </div>
+                    )}
                   </div>
-                )}
-                {place.priceRange && (
-                  <div className="bg-secondary rounded-xl p-4">
-                    <div className="flex items-center gap-2 text-muted-foreground mb-1">
-                      <DollarSign className="h-4 w-4" />
-                      <span className="text-xs uppercase">Price</span>
-                    </div>
-                    <p className="font-medium text-sm">{place.priceRange}</p>
-                  </div>
-                )}
-                {place.estimatedDuration && (
-                  <div className="bg-secondary rounded-xl p-4">
-                    <div className="flex items-center gap-2 text-muted-foreground mb-1">
-                      <Timer className="h-4 w-4" />
-                      <span className="text-xs uppercase">Duration</span>
-                    </div>
-                    <p className="font-medium text-sm">{place.estimatedDuration}</p>
-                  </div>
-                )}
-                {place.difficulty && (
-                  <div className="bg-secondary rounded-xl p-4">
-                    <div className="flex items-center gap-2 text-muted-foreground mb-1">
-                      <Mountain className="h-4 w-4" />
-                      <span className="text-xs uppercase">Difficulty</span>
-                    </div>
-                    <p className="font-medium text-sm">{place.difficulty}</p>
-                  </div>
-                )}
-              </div>
+                </div>
+              )}
             </div>
 
             {/* Description */}
@@ -698,9 +753,11 @@ export default function DestinationDetailPage({
               <p className="text-sm text-muted-foreground mb-4">{place.address}</p>
               <Button className="w-full" asChild>
                 <a
-                  href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
-                    place.address || place.name
-                  )}`}
+                  href={
+                    place.coordinates
+                      ? `https://www.google.com/maps/search/?api=1&query=${place.coordinates.lat},${place.coordinates.lng}${place.googlePlaceId ? `&query_place_id=${place.googlePlaceId}` : ''}`
+                      : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(place.name + " " + place.cityName)}`
+                  }
                   target="_blank"
                   rel="noopener noreferrer"
                 >

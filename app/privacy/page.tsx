@@ -17,7 +17,7 @@ export default function PrivacyPage() {
             Privacy <span className="text-primary">Policy</span>
           </h1>
           <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-            Last updated: January 1, 2024
+            Last updated: June 01, 2026
           </p>
         </div>
       </section>

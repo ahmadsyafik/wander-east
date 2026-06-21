@@ -78,7 +78,7 @@ export default function RegisterPage() {
         />
         <div className="absolute inset-0 bg-gradient-to-l from-background via-background/50 to-transparent" />
         <div className="absolute bottom-10 left-10 right-10">
-          <h2 className="text-2xl font-bold mb-2" style={serifFont}>Join 10,000+ Explorers</h2>
+          <h2 className="text-2xl font-bold mb-2" style={serifFont}>Join 1000+ Explorers</h2>
           <p className="text-muted-foreground">
             Start your journey to discover the hidden gems of East Java. Earn XP,
             collect badges, and share your adventures.
